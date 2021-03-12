@@ -1,0 +1,10 @@
+{
+  "section": "products",
+  "subSection": "catalog",
+  "subSectionItems": [
+    {
+      "labelId": "admin/sheets-catalog-import.title",
+      "path": "/admin/sheets-catalog-import/"
+    }
+  ]
+}

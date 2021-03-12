@@ -1,0 +1,14 @@
+.borderCollapse {
+	border-collapse: collapse;
+}
+
+.code {
+	padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: rgba(29,28,29,.04);
+}
+
+.striped {
+    background-color: #f6f8fa;
+}

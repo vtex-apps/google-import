@@ -1,0 +1,129 @@
+{
+  "name": "sheets-catalog-import",
+  "vendor": "vtex",
+  "version": "0.0.1",
+  "title": "Google Catalog Import",
+  "description": "Update Catalog from Google Sheet",
+  "categories": [],
+  "settingsSchema": {},
+  "dependencies": {
+    "vtex.styleguide": "9.x"
+  },
+  "registries": [
+    "smartcheckout"
+  ],
+  "builders": {
+    "dotnet": "2.x",
+    "admin": "0.x",
+    "react": "3.x",
+    "messages": "1.x",
+    "docs": "0.x"
+  },
+  "mustUpdateAt": "2018-09-05",
+  "scripts": {
+    "postreleasy": "vtex publish --verbose"
+  },
+  "billingOptions": {
+    "support": {
+      "url": "https://help-tickets.vtex.com/en/support?app=vtexus.sheets-catalog-import"
+    },
+    "type": "free",
+    "availableCountries": [
+      "*"
+    ]
+  },
+  "policies": [
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "bnb.data.bl.uk"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "nuget.org"
+      }
+    },
+    {
+      "name": "ADMIN_DS"
+    },
+    {
+      "name": "AcessaTodosPedidos"
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "{{account}}.vtexcommercestable.com.br",
+        "path": "/api/dataentities/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "{{account}}.vtexcommercestable.com.br",
+        "path": "/api/catalog/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "www.googleapis.com",
+        "path": "/drive/v3/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "accounts.google.com",
+        "path": "/o/oauth2/auth/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "oauth2.googleapis.com",
+        "path": "/token/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "drive.google.com",
+        "path": "/file/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "drive.google.com",
+        "path": "/uc/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "www.googleapis.com",
+        "path": "/drive/v3/changes/watch"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "doc-0g-8o-docs.googleusercontent.com",
+        "path": "*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "doc-0g-3s-docs.googleusercontent.com",
+        "path": "*"
+      }
+    },
+    {
+      "name": "vbase-read-write"
+    }
+  ],
+  "$schema": "https://raw.githubusercontent.com/vtex/node-vtex-api/master/gen/manifest.schema"
+}

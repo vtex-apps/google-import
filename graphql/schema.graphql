@@ -1,0 +1,12 @@
+type Query {
+  haveToken: Boolean
+  getOwnerEmail(accountName: String!): String
+  sheetLink: String
+}
+
+type Mutation {
+  revokeToken(accountName: String!): Boolean
+  googleAuthorize: String
+  createSheet: String
+  processSheet: String
+}

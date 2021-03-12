@@ -1,0 +1,9 @@
+{
+  "admin.app.sheets-catalog-import": {
+    "around": [ "layout" ],
+    "path": "/admin/app/sheets-catalog-import/"
+  },
+  "layout": {
+    "component": "Admin"
+  }
+}

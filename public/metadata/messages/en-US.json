@@ -1,0 +1,15 @@
+{
+  "name": "Google Catalog Import",
+  "headline": "Process Catalog data from Google Drive Sheet.",
+  "overview": "This app allows catalog data to be bulk imported into the VTEX Catalog from a user's Google Drive.",
+  "features": [
+    "",
+    "",
+    "",
+    ""
+  ],
+  "websiteURL": "https://vtex.com/",
+  "support": {
+    "url": "https://help-tickets.vtex.com/en/support?app=vtexus.sheets-catalog-import"
+  }
+}

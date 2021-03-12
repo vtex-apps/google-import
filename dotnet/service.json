@@ -1,0 +1,58 @@
+{
+  "stack": "dotnet",
+  "memory": 512,
+  "minReplicas": 10,
+  "maxReplicas": 100,
+  "runtimeArgs": [
+  ],
+  "routes": {
+    "SheetsCatalogImport": {
+      "path": "/sheets-catalog-import/process-sheet",
+      "public": true
+    },
+    "saveToken": {
+      "path": "/sheets-catalog-import/set-token",
+      "public": true
+    },
+    "googleAuthorize": {
+      "path": "/sheets-catalog-import/auth",
+      "public": true
+    },
+    "processReturnUrl": {
+      "path": "/sheets-catalog-import/return",
+      "public": true
+    },
+    "processReturnCode": {
+      "path": "/sheets-catalog-import/return-code",
+      "public": true
+    },
+    "listFiles": {
+      "path": "/sheets-catalog-import/list-files",
+      "public": true
+    },
+    "haveToken": {
+      "path": "/sheets-catalog-import/have-token",
+      "public": true
+    },
+    "getOwners": {
+      "path": "/sheets-catalog-import/list-owners",
+      "public": true
+    },
+    "getOwnerEmail": {
+      "path": "/sheets-catalog-import/owner-email",
+      "public": true
+    },
+    "revokeToken": {
+      "path": "/sheets-catalog-import/revoke-token",
+      "public": true
+    },
+    "clearLock": {
+      "path": "/sheets-catalog-import/clear-lock",
+      "public": true
+    },
+    "getCategoryTree": {
+      "path": "/sheets-catalog-import/get-category-tree",
+      "public": true
+    }
+  }
+}

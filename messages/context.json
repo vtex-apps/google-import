@@ -1,0 +1,11 @@
+{
+  "admin/sheets-catalog-import.title": "admin/sheets-catalog-import.title",
+  "admin/sheets-catalog-import.setup.title": "admin/sheets-catalog-import.setup.title",
+  "admin/sheets-catalog-import.setup.description": "admin/sheets-catalog-import.setup.description",
+  "admin/sheets-catalog-import.connected.text": "admin/sheets-catalog-import.connected.text",
+  "admin/sheets-catalog-import.instructions": "admin/sheets-catalog-import.instructions",
+  "admin/sheets-catalog-import.process.button": "admin/sheets-catalog-import.process.button",
+  "admin/sheets-catalog-import.connected-as": "admin/sheets-catalog-import.connected-as",
+  "admin/sheets-catalog-import.disconnect.button": "admin/sheets-catalog-import.disconnect.button",
+  "admin/sheets-catalog-import.setup.button": "admin/sheets-catalog-import.setup.button"
+}
