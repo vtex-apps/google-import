@@ -40,6 +40,7 @@ namespace SheetsCatalogImport.Data
         public const string GOOGLE_ACCESS_TYPE = "offline";
         //public const string AUTH_SITE_BASE = "googleauth.myvtex.com";
         public const string AUTH_SITE_BASE = "gauth--googleauth.myvtex.com";
+        //public const string AUTH_SITE_BASE = "gauth--sandboxusdev.myvtex.com";
         public const string REDIRECT_PATH = "return";
 
         public const string AUTH_APP_PATH = "google-auth";
@@ -68,7 +69,7 @@ namespace SheetsCatalogImport.Data
 
         public const int LOCK_TIMEOUT = 1;
 
-        public const string HEADER = "ProductId,SkuId,Category,Brand,ProductName,Product Reference Code,SkuName,Sku,EAN/GTIN,SKU Reference Code,Height,Width,Length,Weight,Product Description,Search Keywords,MetaTag Description,Image URL 1,Image URL 2,Image URL 3,Image URL 4,Image URL 5,Display if Out of Stock,MSRP Selling Price (Price to GPP),Available Quantity,ProductSpecs,Product Spec Group,Product Spec Field,Product Spec Value,Sku Specs";
+        public const string HEADER = "ProductId,SkuId,Category,Brand,ProductName,Product Reference Code,SkuName,Sku,EAN/GTIN,SKU Reference Code,Height,Width,Length,Weight,Product Description,Search Keywords,MetaTag Description,Image URL 1,Image URL 2,Image URL 3,Image URL 4,Image URL 5,Display if Out of Stock,MSRP Selling Price (Price to GPP),Available Quantity,ProductSpecs,Product Spec Group,Product Spec Field,Product Spec Value,Sku Specs,Status";
 
         public class FolderNames
         {

@@ -5,11 +5,8 @@ using System.Text;
 
 namespace SheetsCatalogImport.Models
 {
-    public class CreateSkuResponse
+    public class SkuRequest
     {
-        [JsonProperty("Id")]
-        public long Id { get; set; }
-
         [JsonProperty("ProductId")]
         public long ProductId { get; set; }
 
@@ -23,55 +20,55 @@ namespace SheetsCatalogImport.Models
         public string RefId { get; set; }
 
         [JsonProperty("PackagedHeight")]
-        public long PackagedHeight { get; set; }
+        public double? PackagedHeight { get; set; }
 
         [JsonProperty("PackagedLength")]
-        public long PackagedLength { get; set; }
+        public double? PackagedLength { get; set; }
 
         [JsonProperty("PackagedWidth")]
-        public long PackagedWidth { get; set; }
+        public double? PackagedWidth { get; set; }
 
         [JsonProperty("PackagedWeightKg")]
-        public long PackagedWeightKg { get; set; }
+        public double? PackagedWeightKg { get; set; }
 
         [JsonProperty("Height")]
-        public object Height { get; set; }
+        public double? Height { get; set; }
 
         [JsonProperty("Length")]
-        public object Length { get; set; }
+        public double? Length { get; set; }
 
         [JsonProperty("Width")]
-        public object Width { get; set; }
+        public double? Width { get; set; }
 
         [JsonProperty("WeightKg")]
-        public object WeightKg { get; set; }
+        public double? WeightKg { get; set; }
 
         [JsonProperty("CubicWeight")]
-        public double CubicWeight { get; set; }
+        public double? CubicWeight { get; set; }
 
         [JsonProperty("IsKit")]
         public bool IsKit { get; set; }
 
         [JsonProperty("CreationDate")]
-        public object CreationDate { get; set; }
+        public string CreationDate { get; set; }
 
         [JsonProperty("RewardValue")]
         public object RewardValue { get; set; }
 
         [JsonProperty("EstimatedDateArrival")]
-        public object EstimatedDateArrival { get; set; }
+        public string EstimatedDateArrival { get; set; }
 
         [JsonProperty("ManufacturerCode")]
         public string ManufacturerCode { get; set; }
 
         [JsonProperty("CommercialConditionId")]
-        public long CommercialConditionId { get; set; }
+        public long? CommercialConditionId { get; set; }
 
         [JsonProperty("MeasurementUnit")]
         public string MeasurementUnit { get; set; }
 
         [JsonProperty("UnitMultiplier")]
-        public long UnitMultiplier { get; set; }
+        public long? UnitMultiplier { get; set; }
 
         [JsonProperty("ModalType")]
         public object ModalType { get; set; }

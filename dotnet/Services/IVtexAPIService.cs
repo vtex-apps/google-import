@@ -10,8 +10,8 @@ namespace SheetsCatalogImport.Services
         //Task<Token> RefreshToken(string refreshToken);
 
         Task<string> ProcessSheet();
-        Task<CreateProductResponse> CreateProduct(CreateProductRequest createProductRequest);
-        Task<CreateSkuResponse> CreateSku(CreateSkuRequest createSkuRequest);
+        Task<ProductResponse> CreateProduct(ProductRequest createProductRequest);
+        Task<SkuResponse> CreateSku(SkuRequest createSkuRequest);
         Task<GetCategoryTreeResponse[]> GetCategoryTree(int categoryLevels);
         Task<GetBrandListResponse[]> GetBrandList();
         Task<long[]> ListSkuIds(int page, int pagesize);

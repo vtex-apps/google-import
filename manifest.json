@@ -14,6 +14,7 @@
   ],
   "builders": {
     "dotnet": "2.x",
+    "graphql": "1.x",
     "admin": "0.x",
     "react": "3.x",
     "messages": "1.x",
@@ -103,8 +104,8 @@
     {
       "name": "outbound-access",
       "attrs": {
-        "host": "www.googleapis.com",
-        "path": "/drive/v3/changes/watch"
+        "host": "sheets.googleapis.com",
+        "path": "/v4/spreadsheets/*"
       }
     },
     {

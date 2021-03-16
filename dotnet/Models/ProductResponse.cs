@@ -5,19 +5,19 @@ using System.Text;
 
 namespace SheetsCatalogImport.Models
 {
-    public class CreateProductRequest
+    public class ProductResponse
     {
         [JsonProperty("Name")]
         public string Name { get; set; }
 
         [JsonProperty("DepartmentId")]
-        public long? DepartmentId { get; set; }
+        public long DepartmentId { get; set; }
 
         [JsonProperty("CategoryId")]
-        public long? CategoryId { get; set; }
+        public long CategoryId { get; set; }
 
         [JsonProperty("BrandId")]
-        public long? BrandId { get; set; }
+        public long BrandId { get; set; }
 
         [JsonProperty("LinkId")]
         public string LinkId { get; set; }
@@ -35,7 +35,7 @@ namespace SheetsCatalogImport.Models
         public string DescriptionShort { get; set; }
 
         [JsonProperty("ReleaseDate")]
-        public string ReleaseDate { get; set; }
+        public DateTimeOffset ReleaseDate { get; set; }
 
         [JsonProperty("KeyWords")]
         public string KeyWords { get; set; }
@@ -53,18 +53,18 @@ namespace SheetsCatalogImport.Models
         public string MetaTagDescription { get; set; }
 
         [JsonProperty("SupplierId")]
-        public long? SupplierId { get; set; }
+        public long SupplierId { get; set; }
 
         [JsonProperty("ShowWithoutStock")]
         public bool ShowWithoutStock { get; set; }
 
         [JsonProperty("AdWordsRemarketingCode")]
-        public string AdWordsRemarketingCode { get; set; }
+        public object AdWordsRemarketingCode { get; set; }
 
         [JsonProperty("LomadeeCampaignCode")]
-        public string LomadeeCampaignCode { get; set; }
+        public object LomadeeCampaignCode { get; set; }
 
         [JsonProperty("Score")]
-        public long? Score { get; set; }
+        public long Score { get; set; }
     }
 }

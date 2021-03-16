@@ -797,8 +797,6 @@ namespace SheetsCatalogImport.Services
             }
 
             int statusRow = headerIndexDictionary["status"];
-            int typeRow = headerIndexDictionary["type"];
-            int activateRow = headerIndexDictionary["activate"];
 
             GoogleSheetCreate googleSheetCreate = new GoogleSheetCreate
             {
