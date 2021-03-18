@@ -76,8 +76,8 @@
 
         public async Task<bool> SaveToken(Token token)
         {
-            //Console.WriteLine("-> SaveToken <-");
             var jsonSerializedToken = JsonConvert.SerializeObject(token);
+            Console.WriteLine($"-> SaveToken <- {jsonSerializedToken}");
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
@@ -94,9 +94,9 @@
 
             var client = _clientFactory.CreateClient();
             var response = await client.SendAsync(request);
-            //string responseContent = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"-> SaveToken [{response.StatusCode}] {jsonSerializedToken} <-");
-            _context.Vtex.Logger.Info("SaveToken", null, $"[{response.StatusCode}] {jsonSerializedToken}");
+            string responseContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"-> SaveToken [{response.StatusCode}] '{responseContent}' {jsonSerializedToken} <-");
+            _context.Vtex.Logger.Info("SaveToken", null, $"[{response.StatusCode}] '{responseContent}' {jsonSerializedToken}");
             return response.IsSuccessStatusCode;
         }
 

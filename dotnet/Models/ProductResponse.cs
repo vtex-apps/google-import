@@ -5,8 +5,12 @@ using System.Text;
 
 namespace SheetsCatalogImport.Models
 {
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class ProductResponse
     {
+        [JsonProperty("Id")]
+        public long Id { get; set; }
+
         [JsonProperty("Name")]
         public string Name { get; set; }
 

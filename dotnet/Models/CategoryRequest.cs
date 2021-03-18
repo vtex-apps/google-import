@@ -5,6 +5,7 @@ using System.Text;
 
 namespace SheetsCatalogImport.Models
 {
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class CategoryRequest
     {
         [JsonProperty("Id")]

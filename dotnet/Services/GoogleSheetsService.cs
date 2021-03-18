@@ -48,7 +48,10 @@ namespace SheetsCatalogImport.Services
 
         public async Task<Token> RefreshGoogleAuthorizationToken(string refreshToken)
         {
-            return await this.RefreshToken(refreshToken);
+            Console.WriteLine($"    ------------------  RefreshGoogleAuthorizationToken -------------------------   ");
+            Token token = await this.RefreshToken(refreshToken);
+            Console.WriteLine($"    ------------------  RefreshGoogleAuthorizationToken {JsonConvert.SerializeObject(token)}   ");
+            return token;
         }
 
         public async Task<bool> RevokeGoogleAuthorizationToken()
@@ -168,14 +171,15 @@ namespace SheetsCatalogImport.Services
 
         private async Task<Token> RefreshToken(string refreshToken)
         {
+            //Console.WriteLine($"RefreshToken");
             Token token = null;
 
-            if (string.IsNullOrEmpty(refreshToken))
+            if (!string.IsNullOrEmpty(refreshToken))
             {
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    RequestUri = new Uri($"http://{SheetsCatalogImportConstants.AUTH_SITE_BASE}/{SheetsCatalogImportConstants.AUTH_APP_PATH}/{SheetsCatalogImportConstants.REFRESH_PATH}/{SheetsCatalogImportConstants.APP_TYPE}/{refreshToken}"),
+                    RequestUri = new Uri($"http://{SheetsCatalogImportConstants.AUTH_SITE_BASE}/{SheetsCatalogImportConstants.AUTH_APP_PATH}/{SheetsCatalogImportConstants.REFRESH_PATH}/{SheetsCatalogImportConstants.APP_TYPE}/{HttpUtility.UrlEncode(refreshToken)}"),
                     Content = new StringContent(string.Empty, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_FORM)
                 };
 
@@ -191,20 +195,29 @@ namespace SheetsCatalogImport.Services
                 {
                     var response = await client.SendAsync(request);
                     string responseContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"RefreshToken = {responseContent}");
+                    //Console.WriteLine($" RefreshToken = {response.IsSuccessStatusCode}");
                     if (response.IsSuccessStatusCode)
                     {
                         token = JsonConvert.DeserializeObject<Token>(responseContent);
+                        Console.WriteLine($"RefreshToken = {responseContent}");
+                        //Console.WriteLine($"RefreshToken = {JsonConvert.SerializeObject(token)}");
                     }
                     else
                     {
+                        Console.WriteLine($"url = '{request.RequestUri}'");
+                        Console.WriteLine($"RefreshToken: [{response.StatusCode}] {responseContent}");
                         _context.Vtex.Logger.Info("RefreshToken", null, $"{response.StatusCode} {responseContent}");
                     }
                 }
                 catch (Exception ex)
                 {
+                    Console.WriteLine($"RefreshToken Error: {ex.Message}");
                     _context.Vtex.Logger.Error("RefreshToken", null, $"Refresh Token {refreshToken}", ex);
                 }
+            }
+            else
+            {
+                Console.WriteLine($"RefreshToken is Null!");
             }
 
             return token;
@@ -225,27 +238,35 @@ namespace SheetsCatalogImport.Services
                 {
                     if (token.ExpiresAt <= DateTime.Now)
                     {
-                        Console.WriteLine($"ExpiresAt = {token.ExpiresAt} Refreshing token.");
-                        token = await this.RefreshGoogleAuthorizationToken(token.RefreshToken);
-                        token.ExpiresAt = DateTime.Now.AddSeconds(token.ExpiresIn);
-                        if (string.IsNullOrEmpty(token.RefreshToken))
+                        Console.WriteLine($"ExpiresAt = {token.ExpiresAt} Refreshing token. [{string.IsNullOrEmpty(refreshToken)}]");
+                        token = await this.RefreshGoogleAuthorizationToken(refreshToken);
+                        if (token != null)
                         {
-                            token.RefreshToken = refreshToken;
-                        }
+                            token.ExpiresAt = DateTime.Now.AddSeconds(token.ExpiresIn);
+                            if (string.IsNullOrEmpty(token.RefreshToken))
+                            {
+                                token.RefreshToken = refreshToken;
+                            }
 
-                        bool saved = await _sheetsCatalogImportRepository.SaveToken(token);
+                            bool saved = await _sheetsCatalogImportRepository.SaveToken(token);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Failed to refresh token!");
+                            _context.Vtex.Logger.Warn("GetGoogleToken", null, $"Could not refresh token.");
+                        }
                     }
                 }
                 else
                 {
                     Console.WriteLine($"Did not load token. Have Access token?{!string.IsNullOrEmpty(token.AccessToken)} Have Refresh token?{!string.IsNullOrEmpty(token.RefreshToken)}");
-                    _context.Vtex.Logger.Info("GetGoogleToken", null, $"Could not load token. Have Access token?{!string.IsNullOrEmpty(token.AccessToken)} Have Refresh token?{!string.IsNullOrEmpty(token.RefreshToken)}");
+                    _context.Vtex.Logger.Warn("GetGoogleToken", null, $"Could not load token. Have Access token?{!string.IsNullOrEmpty(token.AccessToken)} Have Refresh token?{!string.IsNullOrEmpty(token.RefreshToken)}");
                     token = null;
                 }
             }
             else
             {
-                _context.Vtex.Logger.Info("GetGoogleToken", null, $"Could not load token.  Refresh token was null. Have Access token?{token != null && !string.IsNullOrEmpty(token.AccessToken)}");
+                _context.Vtex.Logger.Warn("GetGoogleToken", null, $"Could not load token.  Refresh token was null. Have Access token?{token != null && !string.IsNullOrEmpty(token.AccessToken)}");
             }
 
             return token;
@@ -258,13 +279,8 @@ namespace SheetsCatalogImport.Services
             Token token = await this.GetGoogleToken();
             if (token != null && !string.IsNullOrEmpty(token.AccessToken))
             {
-                string fields = "id";
-                string query = $"mimeType contains 'spreadsheet' and trashed = false";
-                //string query = $"trashed = false";
-                //if(!string.IsNullOrEmpty(folderId))
-                {
-                    query = $"{query} and '{folderId}' in parents ";
-                }
+                string fields = "*";
+                string query = $"mimeType contains 'spreadsheet' and trashed = false and '{folderId}' in parents ";
 
                 var request = new HttpRequestMessage
                 {
@@ -300,11 +316,13 @@ namespace SheetsCatalogImport.Services
                 catch (Exception ex)
                 {
                     _context.Vtex.Logger.Error("ListSheetsInFolder", folderId, $"Error", ex);
+                    Console.WriteLine($"ListSheetsInFolder: {folderId} Error: {ex.Message} ");
                 }
             }
             else
             {
                 _context.Vtex.Logger.Warn("ListSheetsInFolder", folderId, "Token error.");
+                Console.WriteLine($"ListSheetsInFolder: {folderId} Token error. ");
             }
 
             return listFilesResponse;

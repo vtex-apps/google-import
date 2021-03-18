@@ -26,5 +26,6 @@ namespace SheetsCatalogImport.Services
         Task<string> SaveFile(StringBuilder file);
         Task<string> GetSheet(string fileId, string range);
         Task<string> GetOwnerEmail();
+        Task<UpdateValuesResponse> WriteSpreadsheetValues(string fileId, ValueRange valueRange);
     }
 }

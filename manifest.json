@@ -53,6 +53,12 @@
       "name": "AcessaTodosPedidos"
     },
     {
+      "name": "modify_prices"
+    },
+    {
+      "name": "LogisticsViewer"
+    },
+    {
       "name": "outbound-access",
       "attrs": {
         "host": "{{account}}.vtexcommercestable.com.br",
@@ -64,6 +70,20 @@
       "attrs": {
         "host": "{{account}}.vtexcommercestable.com.br",
         "path": "/api/catalog/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "api.vtex.com",
+        "path": "/{{account}}/pricing/prices/*"
+      }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "logistics.vtexcommercestable.com.br",
+        "path": "/api/logistics/pvt/*"
       }
     },
     {

@@ -5,10 +5,20 @@ using System.Text;
 
 namespace SheetsCatalogImport.Models
 {
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class ProductRequest
     {
+        [JsonProperty("Id")]
+        public long? Id { get; set; }
+
         [JsonProperty("Name")]
         public string Name { get; set; }
+
+        [JsonProperty("CategoryPath")]
+        public string CategoryPath { get; set; }
+
+        [JsonProperty("BrandName")]
+        public string BrandName { get; set; }
 
         [JsonProperty("DepartmentId")]
         public long? DepartmentId { get; set; }

@@ -5,8 +5,12 @@ using System.Text;
 
 namespace SheetsCatalogImport.Models
 {
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class SkuRequest
     {
+        [JsonProperty("Id")]
+        public long? Id { get; set; }
+
         [JsonProperty("ProductId")]
         public long ProductId { get; set; }
 

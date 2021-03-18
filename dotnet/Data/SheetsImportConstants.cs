@@ -63,13 +63,16 @@ namespace SheetsCatalogImport.Data
 
         public const string APP_TYPE = "catalog";
 
+        public const string ARCHIVE_CREATED = "Sku archive already created";
+
         public const int MIN_WRITE_BLOCK_SIZE = 5;
         public const int WRITE_BLOCK_SIZE_DIVISOR = 50;
         public const int DEFAULT_SHEET_SIZE = 1000;
 
         public const int LOCK_TIMEOUT = 1;
 
-        public const string HEADER = "ProductId,SkuId,Category,Brand,ProductName,Product Reference Code,SkuName,Sku,EAN/GTIN,SKU Reference Code,Height,Width,Length,Weight,Product Description,Search Keywords,MetaTag Description,Image URL 1,Image URL 2,Image URL 3,Image URL 4,Image URL 5,Display if Out of Stock,MSRP Selling Price (Price to GPP),Available Quantity,ProductSpecs,Product Spec Group,Product Spec Field,Product Spec Value,Sku Specs,Status";
+        public const string HEADER = "ProductId,SkuId,Category,Brand,ProductName,Product Reference Code,SkuName,Sku EAN/GTIN,SKU Reference Code,Height,Width,Length,Weight,Product Description,Search Keywords,MetaTag Description,Image URL 1,Image URL 2,Image URL 3,Image URL 4,Image URL 5,Display if Out of Stock,MSRP,Selling Price (Price to GPP),Available Quantity,ProductSpecs,Product Spec Group,Sku Specs,Status,Message";
+        public const long VOLUMETIC_FACTOR = 166;
 
         public class FolderNames
         {

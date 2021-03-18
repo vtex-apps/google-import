@@ -9,6 +9,7 @@ using System.Text;
 using Newtonsoft.Json;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace SheetsCatalogImport.Services
 {
@@ -59,12 +60,13 @@ namespace SheetsCatalogImport.Services
                 return ($"Import started {importStarted} in progress.");
             }
 
-            await _sheetsCatalogImportRepository.SetImportLock(DateTime.Now);
+            //await _sheetsCatalogImportRepository.SetImportLock(DateTime.Now);
             _context.Vtex.Logger.Info("ProcessSheet", null, $"Set new lock: {DateTime.Now}");
 
-            bool updated = false;
+            bool success = false;
             int doneCount = 0;
             int errorCount = 0;
+            StringBuilder sb = new StringBuilder();
 
             string importFolderId = null;
             string accountFolderId = null;
@@ -74,14 +76,18 @@ namespace SheetsCatalogImport.Services
             if (folderIds != null)
             {
                 importFolderId = folderIds.ProductsFolderId;
-                accountFolderId = folderIds.AccountFolderId;
+                //accountFolderId = folderIds.AccountFolderId;
+            }
+            else
+            {
+                Console.WriteLine("LoadFolderIds returned Null!");
             }
 
-            ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(accountFolderId);
-
-            var sheetIds = spreadsheets.Files.Select(s => s.Id);
-            if (sheetIds != null)
+            Console.WriteLine($"ListSheetsInFolder {importFolderId}");
+            ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(importFolderId);
+            if (spreadsheets != null)
             {
+                var sheetIds = spreadsheets.Files.Select(s => s.Id);
                 foreach (var sheetId in sheetIds)
                 {
                     Dictionary<string, int> headerIndexDictionary = new Dictionary<string, int>();
@@ -102,6 +108,7 @@ namespace SheetsCatalogImport.Services
                     int headerIndex = 0;
                     int rowCount = googleSheet.ValueRanges[0].Values.Count();
                     int writeBlockSize = Math.Max(rowCount / SheetsCatalogImportConstants.WRITE_BLOCK_SIZE_DIVISOR, SheetsCatalogImportConstants.MIN_WRITE_BLOCK_SIZE);
+                    string[][] arrValuesToWrite = new string[writeBlockSize][];
                     Console.WriteLine($"Write block size = {writeBlockSize}");
                     int offset = 0;
                     _context.Vtex.Logger.Debug("ProcessSheet", null, $"'{sheetName}' Row count: {rowCount} ");
@@ -112,30 +119,13 @@ namespace SheetsCatalogImport.Services
                         headerIndex++;
                     }
 
-                    int statusColumnNumber = headerIndexDictionary["status"] + 65;
-                    string statusColumnLetter = ((char)statusColumnNumber).ToString();
-                    int messageColumnNumber = headerIndexDictionary["message"] + 65;
-                    string messageColumnLetter = ((char)messageColumnNumber).ToString();
-                    int dateColumnNumber = headerIndexDictionary["date"] + 65;
-                    string dateColumnLetter = ((char)dateColumnNumber).ToString();
-                    // ProductId,SkuId,Category,Brand,ProductName,Product Reference Code,SkuName,Sku EAN/GTIN,SKU Reference Code,Height,Width,Length,Weight,Product Description,Search Keywords,MetaTag Description,Image URL 1,Image URL 2,Image URL 3,Image URL 4,Image URL 5,Display if Out of Stock,MSRP Selling Price (Price to GPP),Available Quantity,ProductSpecs,Product Spec Group,Product Spec Field,Product Spec Value,Sku Specs
-                    //int productIdColumnNumber = headerIndexDictionary["productid"] + 65;
-                    //string productIdColumnLetter = ((char)productIdColumnNumber).ToString();
-                    //int skuIdColumnNumber = headerIndexDictionary["skuid"] + 65;
-                    //string skuIdColumnLetter = ((char)skuIdColumnNumber).ToString();
-                    //int categoryColumnNumber = headerIndexDictionary["category"] + 65;
-                    //string categoryColumnLetter = ((char)categoryColumnNumber).ToString();
-                    //int brandColumnNumber = headerIndexDictionary["brand"] + 65;
-                    //string brandColumnLetter = ((char)brandColumnNumber).ToString();
-                    //int productNameColumnNumber = headerIndexDictionary["productname"] + 65;
-                    //string productNameColumnLetter = ((char)productNameColumnNumber).ToString();
-                    //int productReferenceCodeColumnNumber = headerIndexDictionary["productreferencecode"] + 65;
-                    //string productReferenceCodeColumnLetter = ((char)productReferenceCodeColumnNumber).ToString();
+                    string statusColumnLetter = await GetColumnLetter(headerIndexDictionary["status"]);
+                    string messageColumnLetter = await GetColumnLetter(headerIndexDictionary["message"]);
+                    Console.WriteLine($"Status column = '{statusColumnLetter}' Message = '{messageColumnLetter}'");
 
-                    GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(10);
-                    GetBrandListResponse[] brandList = await this.GetBrandList();
                     for (int index = 1; index < rowCount; index++)
                     {
+                        success = true;
                         string productid = string.Empty;
                         string skuid = string.Empty;
                         string category = string.Empty;
@@ -158,7 +148,8 @@ namespace SheetsCatalogImport.Services
                         string imageUrl4 = string.Empty;
                         string imageUrl5 = string.Empty;
                         string displayIfOutOfStock = string.Empty;
-                        string msrpSellingPrice = string.Empty;
+                        string msrp = string.Empty;
+                        string sellingPrice = string.Empty;
                         string availableQuantity = string.Empty;
                         string productSpecs = string.Empty;
                         string productSpecGroup = string.Empty;
@@ -210,11 +201,13 @@ namespace SheetsCatalogImport.Services
                             imageUrl5 = dataValues[headerIndexDictionary["image url 5"]];
                         if (headerIndexDictionary.ContainsKey("display if out of stock") && headerIndexDictionary["display if out of stock"] < dataValues.Count())
                             displayIfOutOfStock = dataValues[headerIndexDictionary["display if out of stock"]];
-                        if (headerIndexDictionary.ContainsKey("msrp selling price (price to gpp)") && headerIndexDictionary["msrp selling price (price to gpp)"] < dataValues.Count())
-                            msrpSellingPrice = dataValues[headerIndexDictionary["msrp selling price (price to gpp)"]];
+                        if (headerIndexDictionary.ContainsKey("msrp") && headerIndexDictionary["msrp"] < dataValues.Count())
+                            msrp = dataValues[headerIndexDictionary["msrp"]];
+                        if (headerIndexDictionary.ContainsKey("selling price (price to gpp)") && headerIndexDictionary["selling price (price to gpp)"] < dataValues.Count())
+                            sellingPrice = dataValues[headerIndexDictionary["selling price (price to gpp)"]];
                         if (headerIndexDictionary.ContainsKey("available quantity") && headerIndexDictionary["available quantity"] < dataValues.Count())
                             availableQuantity = dataValues[headerIndexDictionary["available quantity"]];
-                        if (headerIndexDictionary.ContainsKey("productspecs") && headerIndexDictionary["aproductspecs"] < dataValues.Count())
+                        if (headerIndexDictionary.ContainsKey("productspecs") && headerIndexDictionary["productspecs"] < dataValues.Count())
                             productSpecs = dataValues[headerIndexDictionary["productspecs"]];
                         if (headerIndexDictionary.ContainsKey("product spec group") && headerIndexDictionary["product spec group"] < dataValues.Count())
                             productSpecGroup = dataValues[headerIndexDictionary["product spec group"]];
@@ -225,117 +218,196 @@ namespace SheetsCatalogImport.Services
                         if (headerIndexDictionary.ContainsKey("sku specs") && headerIndexDictionary["sku specs"] < dataValues.Count())
                             skuSpecs = dataValues[headerIndexDictionary["sku specs"]];
 
-                        long? brandId = null;
-                        long? categoryId = await GetCategoryId(categoryTree, category);
-                        //if(categoryId == null)
-                        //{
-                        //    CreateCategoryRequest createCategoryRequest = new CreateCategoryRequest
-                        //    {
-                        //        ActiveStoreFrontLink = false,
-                        //        AdWordsRemarketingCode = null,
-                        //        IsActive = false,
-                        //        Description = string.Empty,
-                        //        a
-                        //    }
-                        //}
-
-                        if(!string.IsNullOrEmpty(brand))
-                        {
-                            brandId = brandList.Where(b => b.Name.Equals(brand)).Select(b => b.Id).FirstOrDefault();
-                        }
-
-                        GetProductByIdResponse getProductById = null;
-                        if (!string.IsNullOrEmpty(productid))
-                        {
-                            getProductById = await this.GetProductById(productid);
-                        }
-
-                        ProductResponse productResponse = null;
                         ProductRequest productRequest = new ProductRequest
                         {
-                            AdWordsRemarketingCode = null,
-                            IsActive = true,
-                            BrandId = brandId,
-                            CategoryId = categoryId,
-                            DepartmentId = null,
-                            Description = productDescription,
-                            DescriptionShort = productDescription,
-                            IsVisible = true,
-                            KeyWords = null,
-                            LinkId = null,
-                            LomadeeCampaignCode = null,
-                            MetaTagDescription = null,
+                            Id = await ParseLong(productid),
                             Name = productName,
-                            RefId = null,
-                            ReleaseDate = null,
-                            Score = null,
-                            ShowWithoutStock = false,
-                            SupplierId = null,
-                            TaxCode = null,
-                            Title = null
+                            CategoryPath = category,
+                            BrandName = brand,
+                            RefId = productReferenceCode,
+                            Title = productName,
+                            LinkId = $"{productName}-{productReferenceCode}",
+                            Description = productDescription,
+                            ReleaseDate = DateTime.Now.ToString(),
+                            KeyWords = searchKeywords,
+                            IsVisible = true,
+                            IsActive = true,
+                            TaxCode = string.Empty,
+                            MetaTagDescription = metaTagDescription,
+                            ShowWithoutStock = true,
+                            Score = 1
                         };
 
-                        if (getProductById == null)
+                        UpdateResponse productUpdateResponse = await this.CreateProduct(productRequest);
+
+                        sb.AppendLine($"Product: [{productUpdateResponse.StatusCode}] {productUpdateResponse.Message}");
+                        long productId = 0;
+                        if (productUpdateResponse.Success)
                         {
-                            productResponse = await this.CreateProduct(productRequest);
+                            ProductResponse productResponse = JsonConvert.DeserializeObject<ProductResponse>(productUpdateResponse.Message);
+                            productId = productResponse.Id;
+                        }
+                        else if(productUpdateResponse.StatusCode.Equals("Conflict"))
+                        {
+                            // 409 - Same ID "Product already created with this Id"
+                            // 409 - Same RefId "There is already a product created with the same RefId with Product Id 100081202"
+                            // 409 - Same link Id "There is already a product with the same LinkId with Product Id 100081169"
+                            if(productUpdateResponse.Message.Contains("Product already created with this Id"))
+                            {
+                                productId = productRequest.Id ?? 0;
+                            }
+                            else if(productUpdateResponse.Message.Contains("There is already a product"))
+                            {
+                                string[] splitResponse = productUpdateResponse.Message.Split(" ");
+                                productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
+                            }
+                            else
+                            {
+                                // What to do in this case?
+                            }
                         }
                         else
                         {
-                            productResponse = await this.UpdateProduct(productid, productRequest);
+                            // What to do in this case?
                         }
 
-                        GetBrandListResponse brandListResponse = brandList.Where(b => b.Name.Equals(brand)).FirstOrDefault();
-                        int page = 1;
-                        int pageSize = 1000;
-                        long[] skuIds = await this.ListSkuIds(page, pageSize);
-                        while (skuIds.Length.Equals(page * pageSize))
-                        {
-                            page++;
-                            List<long> skuIdsList = skuIds.ToList();
-                            long[] skuIdsTemp = await this.ListSkuIds(page, pageSize);
-                            skuIdsList.AddRange(skuIdsTemp.ToList());
-                            skuIds = skuIdsList.ToArray();
-                        }
+                        double? packagedHeight = await ParseDouble(height);
+                        double? packagedLength = await ParseDouble(length);
+                        double? packagedWidth = await ParseDouble(width);
 
-                        SkuResponse skuResponse = null;
                         SkuRequest skuRequest = new SkuRequest
                         {
-                            EstimatedDateArrival = null,
+                            Id = await ParseLong(skuid),
+                            ProductId = await ParseLong(productid) ?? 0,
                             IsActive = true,
-                            KitItensSellApart = false,
-                            CommercialConditionId = null,
-                            CreationDate = null,
-                            CubicWeight = double.Parse(weight),
-                            Height = double.Parse(height),
-                            IsKit = false,
-                            Length = double.Parse(length),
-                            ManufacturerCode = null,
-                            MeasurementUnit = null,
-                            ModalType = null,
                             Name = skuName,
-                            PackagedHeight = null,
-                            PackagedLength = null,
-                            PackagedWeightKg = null,
-                            PackagedWidth = null,
-                            ProductId = long.Parse(productid),
                             RefId = skuReferenceCode,
-                            RewardValue = null,
-                            UnitMultiplier = null,
-                            WeightKg = null,
-                            Width = double.Parse(width)
+                            PackagedHeight = await ParseDouble(height),
+                            PackagedLength = await ParseDouble(length),
+                            PackagedWidth = await ParseDouble(width),
+                            PackagedWeightKg = await ParseDouble(weight),
+                            CubicWeight = (packagedHeight * packagedLength * packagedWidth) / SheetsCatalogImportConstants.VOLUMETIC_FACTOR, // https://www.efulfillmentservice.com/2012/11/how-to-calculate-dimensional-weight/
+                            IsKit = false,
+                            CommercialConditionId = 1,
+                            MeasurementUnit = "un",
+                            UnitMultiplier = 1,
+                            KitItensSellApart = false
                         };
 
-                        if (!skuIds.Any(s => s.Equals(skuid)))
+
+                        UpdateResponse skuUpdateResponse = await this.CreateSku(skuRequest);
+
+                        sb.AppendLine($"Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
+
+                        if (!string.IsNullOrEmpty(skuEanGtin))
                         {
-                            skuResponse = await this.CreateSku(skuRequest);
+                            UpdateResponse eanResponse = await this.CreateEANGTIN(skuid, skuEanGtin);
+                            sb.AppendLine($"EAN/GTIN: [{eanResponse.StatusCode}] {eanResponse.Message}");
                         }
                         else
                         {
-                            skuResponse = await this.UpdateSku(skuid, skuRequest);
+                            sb.AppendLine($"EAN/GTIN: Empty");
+                        }
+
+                        UpdateResponse updateResponse = null;
+                        if(!string.IsNullOrEmpty(imageUrl1))
+                        {
+                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-1", $"{skuName}-1", true, imageUrl1);
+                            success &= updateResponse.Success;
+                        }
+
+                        if (!string.IsNullOrEmpty(imageUrl2))
+                        {
+                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-2", $"{skuName}-2", false, imageUrl2);
+                            success &= updateResponse.Success;
+                        }
+
+                        if (!string.IsNullOrEmpty(imageUrl3))
+                        {
+                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-3", $"{skuName}-3", false, imageUrl3);
+                            success &= updateResponse.Success;
+                        }
+
+                        if (!string.IsNullOrEmpty(imageUrl4))
+                        {
+                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-4", $"{skuName}-4", false, imageUrl4);
+                            success &= updateResponse.Success;
+                        }
+
+                        if (!string.IsNullOrEmpty(imageUrl5))
+                        {
+                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-5", $"{skuName}-5", false, imageUrl5);
+                            success &= updateResponse.Success;
+                        }
+
+                        sb.AppendLine($"Images: {success}");
+
+                        if (!string.IsNullOrEmpty(msrp) && !string.IsNullOrEmpty(sellingPrice))
+                        {
+                            CreatePrice createPrice = new CreatePrice
+                            {
+                                BasePrice = await ParseCurrency(msrp) ?? 0,
+                                ListPrice = await ParseCurrency(sellingPrice) ?? 0
+                            };
+
+                            UpdateResponse priceResponse = await this.CreatePrice(skuid, createPrice);
+                            sb.AppendLine($"Price: [{priceResponse.StatusCode}] {priceResponse.Message}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"Price: Empty");
+                        }
+
+                        GetWarehousesResponse[] getWarehousesResponse = await GetWarehouses();
+                        //GetWarehousesResponse[] getWarehousesResponse = await ListAllWarehouses();
+                        if (getWarehousesResponse != null)
+                        {
+                            string warehouseId = getWarehousesResponse.Select(w => w.Id).FirstOrDefault();
+                            if (!string.IsNullOrEmpty(warehouseId))
+                            {
+                                InventoryRequest inventoryRequest = new InventoryRequest
+                                {
+                                    DateUtcOnBalanceSystem = null,
+                                    Quantity = await ParseLong(availableQuantity) ?? 0,
+                                    UnlimitedQuantity = false
+                                };
+
+                                UpdateResponse inventoryResponse = await this.SetInventory(skuid, warehouseId, inventoryRequest);
+                                sb.AppendLine($"Inventory: [{inventoryResponse.StatusCode}] {inventoryResponse.Message}");
+                            }
+                            else
+                            {
+                                sb.AppendLine($"Inventory: No Warehouse");
+                            }
+                        }
+                        else
+                        {
+                            sb.AppendLine($"Inventory: Null Warehouse");
+                        }
+
+                        string result = success ? "Done" : "Error";
+                        string[] arrLineValuesToWrite = new string[] { result, sb.ToString() };
+                        arrValuesToWrite[index - offset - 1] = arrLineValuesToWrite;
+                        sb.Clear();
+
+                        if (index % writeBlockSize == 0 || index + 1 == rowCount)
+                        {
+                            ValueRange valueRangeToWrite = new ValueRange
+                            {
+                                Range = $"{sheetName}!{statusColumnLetter}{offset + 2}:{messageColumnLetter}{offset + writeBlockSize + 1}",
+                                Values = arrValuesToWrite
+                            };
+
+                            var writeToSheetResult = await _googleSheetsService.WriteSpreadsheetValues(sheetId, valueRangeToWrite);
+                            _context.Vtex.Logger.Debug("ProcessSheet", null, $"Writing to sheet {JsonConvert.SerializeObject(writeToSheetResult)}");
+                            offset += writeBlockSize;
+                            arrValuesToWrite = new string[writeBlockSize][];
                         }
                     }
                 }
             }
+
+            await _sheetsCatalogImportRepository.ClearImportLock();
 
             return response;
         }
@@ -347,17 +419,31 @@ namespace SheetsCatalogImport.Services
             {
                 string[] nameArr = categoryName.Split('/');
                 string currentLevelCategoryName = nameArr[0];
+                Console.WriteLine($"Category Name = {currentLevelCategoryName}");
                 GetCategoryTreeResponse currentLevelCategoryTree = categoryTree.Where(t => t.Name.Equals(currentLevelCategoryName)).FirstOrDefault();
-                if (nameArr.Length == 0)
+                if (currentLevelCategoryTree != null)
                 {
-                    categoryId = currentLevelCategoryTree.Id;
+                    if (nameArr.Length == 0)
+                    {
+                        categoryId = currentLevelCategoryTree.Id;
+                    }
+                    else if (currentLevelCategoryTree.HasChildren)
+                    {
+                        categoryName = categoryName.Replace($"{currentLevelCategoryName}/", string.Empty);
+                        categoryId = await GetCategoryId(currentLevelCategoryTree.Children, categoryName);
+                    }
                 }
-                else if(currentLevelCategoryTree.HasChildren)
+                else
                 {
-                    categoryName = categoryName.Replace($"{currentLevelCategoryName}/", string.Empty);
-                    categoryId = await GetCategoryId(currentLevelCategoryTree.Children, categoryName);
+                    Console.WriteLine("Current Level Category Tree is Null");
                 }
             }
+            else
+            {
+                Console.WriteLine("Empty Category Name");
+            }
+
+            Console.WriteLine($"categoryId = _ {categoryId} _ ");
 
             return categoryId;
         }
@@ -388,12 +474,13 @@ namespace SheetsCatalogImport.Services
         //    return categoryId;
         //}
 
-        public async Task<ProductResponse> CreateProduct(ProductRequest createProductRequest)
+        public async Task<UpdateResponse> CreateProduct(ProductRequest createProductRequest)
         {
             // POST https://{accountName}.{environment}.com.br/api/catalog/pvt/product
 
             string responseContent = string.Empty;
-            ProductResponse createProductResponse = null;
+            bool success = false;
+            string statusCode = string.Empty;
 
             try
             {
@@ -417,18 +504,23 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
 
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
                 responseContent = await response.Content.ReadAsStringAsync();
-                if (response.IsSuccessStatusCode)
-                {
-                    createProductResponse = JsonConvert.DeserializeObject<ProductResponse>(responseContent);
-                }
             }
             catch (Exception ex)
             {
                 _context.Vtex.Logger.Error("CreateProduct", null, $"Error creating product {createProductRequest.Title}", ex);
             }
 
-            return createProductResponse;
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
         }
 
         public async Task<ProductResponse> UpdateProduct(string productId, ProductRequest updateProductRequest)
@@ -474,12 +566,13 @@ namespace SheetsCatalogImport.Services
             return updateProductResponse;
         }
 
-        public async Task<SkuResponse> CreateSku(SkuRequest createSkuRequest)
+        public async Task<UpdateResponse> CreateSku(SkuRequest createSkuRequest)
         {
             // POST https://{accountName}.{environment}.com.br/api/catalog/pvt/stockkeepingunit
 
             string responseContent = string.Empty;
-            SkuResponse createSkuResponse = null;
+            bool success = false;
+            string statusCode = string.Empty;
 
             try
             {
@@ -503,18 +596,23 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
 
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
                 responseContent = await response.Content.ReadAsStringAsync();
-                if (response.IsSuccessStatusCode)
-                {
-                    createSkuResponse = JsonConvert.DeserializeObject<SkuResponse>(responseContent);
-                }
             }
             catch (Exception ex)
             {
                 _context.Vtex.Logger.Error("CreateSku", null, $"Error creating sku {createSkuRequest.Name}", ex);
             }
 
-            return createSkuResponse;
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
         }
 
         public async Task<SkuResponse> UpdateSku(string skuId, SkuRequest updateSkuRequest)
@@ -773,6 +871,398 @@ namespace SheetsCatalogImport.Services
             }
 
             return listSkuIdsResponse;
+        }
+
+        public async Task<UpdateResponse> CreateSkuFile(string skuId, string imageName, string imageText, bool isMain, string imageUrl)
+        {
+            //POST https://{accountName}.{environment}.com.br/api/catalog/pvt/stockkeepingunit/skuId/file
+
+            bool success = false;
+            string responseContent = string.Empty;
+            string statusCode = string.Empty;
+
+            if (string.IsNullOrEmpty(skuId) || string.IsNullOrEmpty(imageUrl))
+            {
+                responseContent = "Missing Parameter";
+            }
+            else
+            {
+                try
+                {
+                    ImageUpdate imageUpdate = new ImageUpdate
+                    {
+                        IsMain = isMain,
+                        Label = null,
+                        Name = imageName,
+                        Text = imageText,
+                        Url = imageUrl
+                    };
+
+                    string jsonSerializedData = JsonConvert.SerializeObject(imageUpdate);
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Post,
+                        RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/catalog/pvt/stockkeepingunit/{skuId}/file"),
+                        Content = new StringContent(jsonSerializedData, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_JSON)
+                    };
+
+                    //request.Headers.Add(SheetsCatalogImportConstants.USE_HTTPS_HEADER_NAME, "true");
+                    string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                    if (authToken != null)
+                    {
+                        request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                        request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                        request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                    }
+
+                    var client = _clientFactory.CreateClient();
+                    var response = await client.SendAsync(request);
+                    responseContent = await response.Content.ReadAsStringAsync();
+                    success = response.IsSuccessStatusCode;
+                    if (!success)
+                    {
+                        _context.Vtex.Logger.Info("UpdateSkuImage", null, $"Response: {responseContent}  [{response.StatusCode}] for request '{jsonSerializedData}' to {request.RequestUri}");
+                    }
+
+                    statusCode = response.StatusCode.ToString();
+                    if (string.IsNullOrEmpty(responseContent))
+                    {
+                        responseContent = $"Updated:{success} {response.StatusCode}";
+                    }
+                    else if (responseContent.Contains(SheetsCatalogImportConstants.ARCHIVE_CREATED))
+                    {
+                        // If the image was already added to the sku, consider it a success
+                        success = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _context.Vtex.Logger.Error("UpdateSkuImage", null, $"Error updating sku '{skuId}' {imageName}", ex);
+                    success = false;
+                    responseContent = ex.Message;
+                }
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
+        public async Task<UpdateResponse> CreateEANGTIN(string skuId, string ean)
+        {
+            // POST https://accountName.vtexcommercestable.com.br/api/catalog/pvt/stockkeepingunit/skuId/ean/ean
+
+            bool success = false;
+            string responseContent = string.Empty;
+            string statusCode = string.Empty;
+
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/catalog/pvt/stockkeepingunit/{skuId}/ean/{ean}"),
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("CreateEANGTIN", null, $"Error creating EAN/GTIN {ean} for Sku {skuId}", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
+        public async Task<UpdateResponse> CreatePrice(string skuId, CreatePrice createPrice)
+        {
+            // PUT https://api.vtex.com/accountName/pricing/prices/skuId
+
+            bool success = false;
+            string responseContent = string.Empty;
+            string statusCode = string.Empty;
+
+            try
+            {
+                string jsonSerializedData = JsonConvert.SerializeObject(createPrice);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"http://api.vtex.com/{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}/pricing/prices/{skuId}"),
+                    Content = new StringContent(jsonSerializedData, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_JSON)
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine($"CreatePrice '{request.RequestUri}' [{statusCode}] {responseContent} {jsonSerializedData}");
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("CreatePrice", null, $"Error creating Price for Sku {skuId}", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
+        public async Task<GetWarehousesResponse[]> GetWarehouses()
+        {
+            // GET https://logistics.environment.com.br/api/logistics/pvt/configuration/warehouses?an=accountName
+
+            GetWarehousesResponse[] getWarehousesResponse = null;
+
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri($"http://logistics.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/logistics/pvt/configuration/warehouses?an={this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}")
+                };
+
+                request.Headers.Add(SheetsCatalogImportConstants.USE_HTTPS_HEADER_NAME, "true");
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"GetWarehouses [{response.StatusCode}] {responseContent}");
+                if (response.IsSuccessStatusCode)
+                {
+                    getWarehousesResponse = JsonConvert.DeserializeObject<GetWarehousesResponse[]>(responseContent);
+                }
+                else
+                {
+                    _context.Vtex.Logger.Warn("GetWarehouses", null, $"Could not get warehouses' [{response.StatusCode}]");
+                }
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("GetWarehouses", null, $"Error getting warehouses", ex);
+            }
+
+            return getWarehousesResponse;
+        }
+
+        public async Task<GetWarehousesResponse[]> ListAllWarehouses()
+        {
+            GetWarehousesResponse[] listAllWarehousesResponse = null;
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.vtexcommercestable.com.br/api/logistics/pvt/configuration/warehouses")
+            };
+
+            request.Headers.Add(SheetsCatalogImportConstants.USE_HTTPS_HEADER_NAME, "true");
+            string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+            if (authToken != null)
+            {
+                request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+            }
+
+            var client = _clientFactory.CreateClient();
+            var response = await client.SendAsync(request);
+            string responseContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"ListAllWarehouses [{response.StatusCode}] {responseContent}");
+            if (response.IsSuccessStatusCode)
+            {
+                listAllWarehousesResponse = JsonConvert.DeserializeObject<GetWarehousesResponse[]>(responseContent);
+            }
+
+            return listAllWarehousesResponse;
+        }
+
+        public async Task<UpdateResponse> SetInventory(string skuId, string warehouseId, InventoryRequest inventoryRequest)
+        {
+            // PUT https://logistics.vtexcommercestable.com.br/api/logistics/pvt/inventory/skus/skuId/warehouses/warehouseId?an=accountName
+
+            bool success = false;
+            string responseContent = string.Empty;
+            string statusCode = string.Empty;
+
+            try
+            {
+                string jsonSerializedData = JsonConvert.SerializeObject(inventoryRequest);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"http://logistics.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/logistics/pvt/inventory/skus/{skuId}/warehouses/{warehouseId}?an={this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}"),
+                    Content = new StringContent(jsonSerializedData, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_JSON)
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("SetInventory", null, $"Error setting inventory for sku {skuId} in warehouse {warehouseId}", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
+        private async Task<double?> ParseDouble(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+            else
+            {
+                double retVal;
+                if (double.TryParse(value, out retVal))
+                {
+                    return retVal;
+                }
+                else
+                {
+                    Console.WriteLine($"    --------------- Could not parse {value}");
+                    _context.Vtex.Logger.Warn("ParseDouble", null, $"Could not parse {value}");
+                    return null;
+                }
+            }
+        }
+
+        private async Task<decimal?> ParseCurrency(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+            else
+            {
+                var regex = new Regex(@"([\d,.]+)");
+                var match = regex.Match(value);
+                if (match.Success)
+                {
+                    value = match.Groups[1].Value;
+                }
+
+                decimal retVal;
+                if (decimal.TryParse(value, out retVal))
+                {
+                    return retVal;
+                }
+                else
+                {
+                    Console.WriteLine($"    --------------- Could not parse {value}");
+                    _context.Vtex.Logger.Warn("ParseCurrency", null, $"Could not parse {value}");
+                    return null;
+                }
+            }
+        }
+
+        private async Task<long?> ParseLong(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+            else
+            {
+                long retVal;
+                if (long.TryParse(value, out retVal))
+                {
+                    return retVal;
+                }
+                else
+                {
+                    Console.WriteLine($"    --------------- Could not parse {value}");
+                    _context.Vtex.Logger.Warn("ParseLong", null, $"Could not parse {value}");
+                    return null;
+                }
+            }
+        }
+
+        private async Task<string> GetColumnLetter(int columnNumber)
+        {
+            string columnLetter = string.Empty;
+            int letterCode = columnNumber + 65;
+            if (letterCode <= 90)
+            {
+                columnLetter = ((char)letterCode).ToString();
+            }
+            else
+            {
+                letterCode = letterCode - 26;
+                columnLetter = ((char)letterCode).ToString();
+                columnLetter = $"A{columnLetter}";
+            }
+
+            return columnLetter;
         }
     }
 }

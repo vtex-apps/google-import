@@ -135,5 +135,11 @@
             Response.Headers.Add("Cache-Control", "no-cache");
             return Json(await _vtexAPIService.GetCategoryTree(5));
         }
+
+        public async Task ClearLock()
+        {
+            Response.Headers.Add("Cache-Control", "no-cache");
+            await _sheetsCatalogImportRepository.ClearImportLock();
+        }
     }
 }
