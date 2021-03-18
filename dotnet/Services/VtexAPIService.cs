@@ -246,6 +246,7 @@ namespace SheetsCatalogImport.Services
                         {
                             ProductResponse productResponse = JsonConvert.DeserializeObject<ProductResponse>(productUpdateResponse.Message);
                             productId = productResponse.Id;
+                            success = true;
                         }
                         else if(productUpdateResponse.StatusCode.Equals("Conflict"))
                         {
@@ -255,20 +256,24 @@ namespace SheetsCatalogImport.Services
                             if(productUpdateResponse.Message.Contains("Product already created with this Id"))
                             {
                                 productId = productRequest.Id ?? 0;
+                                success = true;
                             }
                             else if(productUpdateResponse.Message.Contains("There is already a product"))
                             {
                                 string[] splitResponse = productUpdateResponse.Message.Split(" ");
                                 productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
+                                success = true;
                             }
                             else
                             {
                                 // What to do in this case?
+                                success = false;
                             }
                         }
                         else
                         {
                             // What to do in this case?
+                            success = false;
                         }
 
                         double? packagedHeight = await ParseDouble(height);
@@ -296,13 +301,30 @@ namespace SheetsCatalogImport.Services
 
 
                         UpdateResponse skuUpdateResponse = await this.CreateSku(skuRequest);
-
                         sb.AppendLine($"Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
+                        if (skuUpdateResponse.StatusCode.Equals("Conflict"))
+                        {
+                            if (skuUpdateResponse.Message.Contains("Sku can not be created because the RefId is registered in Sku id"))
+                            {
+                                string[] splitResponse = skuUpdateResponse.Message.Split(" ");
+                                skuid = splitResponse[splitResponse.Length - 1];
+                                success &= true;
+                            }
+                            else if(skuUpdateResponse.Message.Contains("Sku already created with this Id"))
+                            {
+                                success &= true;
+                            }
+                        }
+                        else
+                        {
+                            success &= skuUpdateResponse.Success;
+                        }
 
                         if (!string.IsNullOrEmpty(skuEanGtin))
                         {
                             UpdateResponse eanResponse = await this.CreateEANGTIN(skuid, skuEanGtin);
                             sb.AppendLine($"EAN/GTIN: [{eanResponse.StatusCode}] {eanResponse.Message}");
+                            success &= eanResponse.Success;
                         }
                         else
                         {
@@ -310,37 +332,58 @@ namespace SheetsCatalogImport.Services
                         }
 
                         UpdateResponse updateResponse = null;
+                        bool imageSuccess = true;
+                        bool haveImage = false;
+                        StringBuilder imageResults = new StringBuilder();
                         if(!string.IsNullOrEmpty(imageUrl1))
                         {
+                            haveImage = true;
                             updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-1", $"{skuName}-1", true, imageUrl1);
-                            success &= updateResponse.Success;
+                            imageSuccess &= updateResponse.Success;
+                            imageResults.AppendLine($"1: {updateResponse.Message}");
                         }
 
                         if (!string.IsNullOrEmpty(imageUrl2))
                         {
+                            haveImage = true;
                             updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-2", $"{skuName}-2", false, imageUrl2);
-                            success &= updateResponse.Success;
+                            imageSuccess &= updateResponse.Success;
+                            imageResults.AppendLine($"2: {updateResponse.Message}");
                         }
 
                         if (!string.IsNullOrEmpty(imageUrl3))
                         {
+                            haveImage = true;
                             updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-3", $"{skuName}-3", false, imageUrl3);
-                            success &= updateResponse.Success;
+                            imageSuccess &= updateResponse.Success;
+                            imageResults.AppendLine($"3: {updateResponse.Message}");
                         }
 
                         if (!string.IsNullOrEmpty(imageUrl4))
                         {
+                            haveImage = true;
                             updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-4", $"{skuName}-4", false, imageUrl4);
-                            success &= updateResponse.Success;
+                            imageSuccess &= updateResponse.Success;
+                            imageResults.AppendLine($"4: {updateResponse.Message}");
                         }
 
                         if (!string.IsNullOrEmpty(imageUrl5))
                         {
+                            haveImage = true;
                             updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-5", $"{skuName}-5", false, imageUrl5);
-                            success &= updateResponse.Success;
+                            imageSuccess &= updateResponse.Success;
+                            imageResults.AppendLine($"5: {updateResponse.Message}");
                         }
 
-                        sb.AppendLine($"Images: {success}");
+                        if (haveImage)
+                        {
+                            success &= imageSuccess;
+                            sb.AppendLine($"Images: {imageSuccess} {imageResults}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"Images: Empty");
+                        }
 
                         if (!string.IsNullOrEmpty(msrp) && !string.IsNullOrEmpty(sellingPrice))
                         {
@@ -351,11 +394,13 @@ namespace SheetsCatalogImport.Services
                             };
 
                             UpdateResponse priceResponse = await this.CreatePrice(skuid, createPrice);
+                            success &= priceResponse.Success;
                             sb.AppendLine($"Price: [{priceResponse.StatusCode}] {priceResponse.Message}");
                         }
                         else
                         {
                             sb.AppendLine($"Price: Empty");
+                            success = false;
                         }
 
                         GetWarehousesResponse[] getWarehousesResponse = await GetWarehouses();
@@ -373,16 +418,67 @@ namespace SheetsCatalogImport.Services
                                 };
 
                                 UpdateResponse inventoryResponse = await this.SetInventory(skuid, warehouseId, inventoryRequest);
+                                success &= inventoryResponse.Success;
                                 sb.AppendLine($"Inventory: [{inventoryResponse.StatusCode}] {inventoryResponse.Message}");
                             }
                             else
                             {
                                 sb.AppendLine($"Inventory: No Warehouse");
+                                success = false;
                             }
                         }
                         else
                         {
                             sb.AppendLine($"Inventory: Null Warehouse");
+                            success = false;
+                        }
+
+                        if(!string.IsNullOrEmpty(productSpecs))
+                        {
+                            string[] allSpecs = productSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                            for (int i = 0; i < allSpecs.Length; i++)
+                            {
+                                Console.WriteLine($"Processing Spec ({i}) '{allSpecs[i]}'");
+                                string[] specsArr = allSpecs[i].Split(':');
+                                string specName = specsArr[0];
+                                string[] specValueArr = specsArr[1].Split(',');
+
+                                SpecAttr prodSpec = new SpecAttr
+                                {
+                                    GroupName = "Default",
+                                    RootLevelSpecification = true,
+                                    FieldName = specName,
+                                    FieldValues = specValueArr
+                                };
+
+                                UpdateResponse prodSpecResponse = await this.SetProdSpecs(productid, prodSpec);
+                                success &= prodSpecResponse.Success;
+                                sb.AppendLine($"Prod Spec {i}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(skuSpecs))
+                        {
+                            string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                            for (int i = 0; i < allSpecs.Length; i++)
+                            {
+                                Console.WriteLine($"Processing Sku Spec ({i}) '{allSpecs[i]}'");
+                                string[] specsArr = allSpecs[i].Split(':');
+                                string specName = specsArr[0];
+                                string specValue = specsArr[1];
+
+                                SpecAttr skuSpec = new SpecAttr
+                                {
+                                    GroupName = "Default",
+                                    RootLevelSpecification = true,
+                                    FieldName = specName,
+                                    FieldValue = specValue
+                                };
+
+                                UpdateResponse prodSpecResponse = await this.SetProdSpecs(skuid, skuSpec);
+                                success &= prodSpecResponse.Success;
+                                sb.AppendLine($"Sku Spec {i}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
+                            }
                         }
 
                         string result = success ? "Done" : "Error";
@@ -892,7 +988,7 @@ namespace SheetsCatalogImport.Services
                     ImageUpdate imageUpdate = new ImageUpdate
                     {
                         IsMain = isMain,
-                        Label = null,
+                        Label = imageText,
                         Name = imageName,
                         Text = imageText,
                         Url = imageUrl
@@ -1077,7 +1173,7 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"GetWarehouses [{response.StatusCode}] {responseContent}");
+                //Console.WriteLine($"GetWarehouses [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     getWarehousesResponse = JsonConvert.DeserializeObject<GetWarehousesResponse[]>(responseContent);
@@ -1162,6 +1258,104 @@ namespace SheetsCatalogImport.Services
             catch (Exception ex)
             {
                 _context.Vtex.Logger.Error("SetInventory", null, $"Error setting inventory for sku {skuId} in warehouse {warehouseId}", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
+        public async Task<UpdateResponse> SetProdSpecs(string productId, SpecAttr prodSpec)
+        {
+            // PUT http://accountName.environment.com.br/api/catalog/pvt/product/productId/specificationvalue
+
+            bool success = false;
+            string responseContent = string.Empty;
+            string statusCode = string.Empty;
+
+            try
+            {
+                string jsonSerializedData = JsonConvert.SerializeObject(prodSpec);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.vtexcommercestable.com.br/api/catalog/pvt/product/{productId}/specificationvalue"),
+                    Content = new StringContent(jsonSerializedData, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_JSON)
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("SetProdSpecs", null, $"Error setting product specs for prodId {productId}", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
+        public async Task<UpdateResponse> SetSkuSpec(string skuId, SpecAttr skuSpec)
+        {
+            // PUT http://accountName.vtexcommercestable.com.br/api/catalog/pvt/stockkeepingunit/SkuId/specificationvalue
+
+            bool success = false;
+            string responseContent = string.Empty;
+            string statusCode = string.Empty;
+
+            try
+            {
+                string jsonSerializedData = JsonConvert.SerializeObject(skuSpec);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.vtexcommercestable.com.br/api/catalog/pvt/stockkeepingunit/{skuId}/specificationvalue"),
+                    Content = new StringContent(jsonSerializedData, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_JSON)
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("SetSkuSpec", null, $"Error setting product specs for sku {skuId}", ex);
             }
 
             UpdateResponse updateResponse = new UpdateResponse
