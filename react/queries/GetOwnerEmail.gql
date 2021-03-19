@@ -1,0 +1,3 @@
+query GetOwnerEmail($accountName: String!) {
+  getOwnerEmail(accountName: $accountName)
+}

@@ -4,8 +4,11 @@
   "admin/sheets-catalog-import.setup.description": "admin/sheets-catalog-import.setup.description",
   "admin/sheets-catalog-import.connected.text": "admin/sheets-catalog-import.connected.text",
   "admin/sheets-catalog-import.instructions": "admin/sheets-catalog-import.instructions",
-  "admin/sheets-catalog-import.process.button": "admin/sheets-catalog-import.process.button",
+  "admin/sheets-catalog-import.sheet-import.button": "admin/sheets-catalog-import.sheet-import.button",
   "admin/sheets-catalog-import.connected-as": "admin/sheets-catalog-import.connected-as",
   "admin/sheets-catalog-import.disconnect.button": "admin/sheets-catalog-import.disconnect.button",
-  "admin/sheets-catalog-import.setup.button": "admin/sheets-catalog-import.setup.button"
+  "admin/sheets-catalog-import.setup.button": "admin/sheets-catalog-import.setup.button",
+  "admin/sheets-catalog-import.catalog-product.title": "admin/sheets-catalog-import.catalog-product.title",
+  "admin/sheets-catalog-import.sheet-link.description": "admin/sheets-catalog-import.sheet-link.description",
+  "admin/sheets-catalog-import.sheet-import.description": "admin/sheets-catalog-import.description"
 }

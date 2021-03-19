@@ -1,0 +1,3 @@
+mutation RevokeToken($accountName: String!) {
+  revokeToken(accountName: $accountName)
+}

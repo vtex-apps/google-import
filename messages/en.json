@@ -3,9 +3,11 @@
   "admin/sheets-catalog-import.setup.title": "Setup",
   "admin/sheets-catalog-import.setup.description": "Please click the button below to grant this app access to your Google Drive.",
   "admin/sheets-catalog-import.connected.text": "Your Google account has been connected",
-  "admin/sheets-catalog-import.process.button": "Process Sheet",
-  "admin/sheets-catalog-import.fetched.text": "All new images will be updated shortly",
+  "admin/sheets-catalog-import.sheet-import.button": "Process Sheet",
   "admin/sheets-catalog-import.connected-as": "Connected to the account ",
   "admin/sheets-catalog-import.disconnect.button": "Disconnect",
-  "admin/sheets-catalog-import.setup.button": "Grant Access"
+  "admin/sheets-catalog-import.setup.button": "Grant Access",
+  "admin/sheets-catalog-import.catalog-product.title": "Product Catalog Import",
+  "admin/sheets-catalog-import.sheet-link.description": "Link to Spreadsheet",
+  "admin/sheets-catalog-import.sheet-import.description": "Import Products to Catalog"
 }
