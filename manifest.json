@@ -56,7 +56,7 @@
       "name": "modify_prices"
     },
     {
-      "name": "LogisticsViewer"
+      "name": "LogisticsAdmin"
     },
     {
       "name": "outbound-access",

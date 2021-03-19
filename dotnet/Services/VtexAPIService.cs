@@ -255,14 +255,14 @@ namespace SheetsCatalogImport.Services
                             // 409 - Same link Id "There is already a product with the same LinkId with Product Id 100081169"
                             if(productUpdateResponse.Message.Contains("Product already created with this Id"))
                             {
-                                productId = productRequest.Id ?? 0;
+                                //productId = productRequest.Id ?? 0;
                                 success = true;
                             }
                             else if(productUpdateResponse.Message.Contains("There is already a product"))
                             {
-                                string[] splitResponse = productUpdateResponse.Message.Split(" ");
-                                productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
-                                success = true;
+                                //string[] splitResponse = productUpdateResponse.Message.Split(" ");
+                                //productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
+                                success = false;
                             }
                             else
                             {
@@ -306,9 +306,9 @@ namespace SheetsCatalogImport.Services
                         {
                             if (skuUpdateResponse.Message.Contains("Sku can not be created because the RefId is registered in Sku id"))
                             {
-                                string[] splitResponse = skuUpdateResponse.Message.Split(" ");
-                                skuid = splitResponse[splitResponse.Length - 1];
-                                success &= true;
+                                //string[] splitResponse = skuUpdateResponse.Message.Split(" ");
+                                //skuid = splitResponse[splitResponse.Length - 1];
+                                success &= false;
                             }
                             else if(skuUpdateResponse.Message.Contains("Sku already created with this Id"))
                             {
@@ -453,7 +453,7 @@ namespace SheetsCatalogImport.Services
 
                                 UpdateResponse prodSpecResponse = await this.SetProdSpecs(productid, prodSpec);
                                 success &= prodSpecResponse.Success;
-                                sb.AppendLine($"Prod Spec {i}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
+                                sb.AppendLine($"Prod Spec {i + 1}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
                             }
                         }
 
@@ -475,9 +475,9 @@ namespace SheetsCatalogImport.Services
                                     FieldValue = specValue
                                 };
 
-                                UpdateResponse prodSpecResponse = await this.SetProdSpecs(skuid, skuSpec);
+                                UpdateResponse prodSpecResponse = await this.SetSkuSpec(skuid, skuSpec);
                                 success &= prodSpecResponse.Success;
-                                sb.AppendLine($"Sku Spec {i}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
+                                sb.AppendLine($"Sku Spec {i + 1}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
                             }
                         }
 
@@ -1330,7 +1330,7 @@ namespace SheetsCatalogImport.Services
             try
             {
                 string jsonSerializedData = JsonConvert.SerializeObject(skuSpec);
-
+                //Console.WriteLine($"SetSkuSpec: {jsonSerializedData}");
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
