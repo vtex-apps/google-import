@@ -985,6 +985,18 @@ namespace SheetsCatalogImport.Services
 
                 UpdateValuesResponse updateValuesResponse = await this.WriteSpreadsheetValues(sheetId, valueRange);
 
+                valueRange = new ValueRange
+                {
+                    MajorDimension = "ROWS",
+                    Range = $"{sheetLabel}!A2:{lastHeaderColumnLetter}2",
+                    Values = new string[][]
+                    {
+                        new string[] { "10","500", "Example/Sample", "Example", "Example Product", "X-MP","Example Sku","8888", "SK-X-MP", "1","1","1","1","This is an example product","example,sample,demo", "This is an example product", "https://sample.demo.com/example.jpg", "","","","","TRUE","80.00","74.99","100","Material:Plastic,Wood,Glass\nBodyPart:Back,Front\nColor:Red,Yellow,Blue","Color:Blue\nMaterial:Plastic","","" },
+                    }
+                };
+
+                updateValuesResponse = await this.WriteSpreadsheetValues(sheetId, valueRange);
+
                 BatchUpdate batchUpdate = new BatchUpdate
                 {
                     Requests = new Request[]
@@ -1079,6 +1091,19 @@ namespace SheetsCatalogImport.Services
                                 }
                             }
                         },
+                        new Request
+                        {
+                            AutoResizeDimensions = new AutoResizeDimensions
+                            {
+                                Dimensions = new Dimensions
+                                {
+                                    Dimension = "COLUMNS",
+                                    EndIndex = headerRowLabels.Count(),
+                                    StartIndex = 0,
+                                    SheetId = 0
+                                }
+                            }
+                        }
                     }
                 };
 
