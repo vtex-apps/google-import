@@ -70,6 +70,10 @@ namespace SheetsCatalogImport.Services
             else
             {
                 success = await this.RevokeGoogleAuthorizationToken(token);
+                if(success)
+                {
+                    await _sheetsCatalogImportRepository.SaveToken(new Token());
+                }
             }
 
             return success;
@@ -1512,12 +1516,113 @@ namespace SheetsCatalogImport.Services
         public async Task<string> GetSheetLink()
         {
             string sheetUrl = string.Empty;
+            string importFolderId = null;
+            string accountFolderId = null;
+            string productsFolderId = null;
             string accountName = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME];
 
             FolderIds folderIds = await _sheetsCatalogImportRepository.LoadFolderIds(accountName);
             if (folderIds != null)
             {
-                string productsFolderId = folderIds.ProductsFolderId;
+                importFolderId = folderIds.ImportFolderId;
+                accountFolderId = folderIds.AccountFolderId;
+                productsFolderId = folderIds.ProductsFolderId;
+            }
+            else
+            {
+                ListFilesResponse getFoldersResponse = await this.GetFolders();
+                if (getFoldersResponse != null)
+                {
+                    importFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(SheetsCatalogImportConstants.FolderNames.IMPORT)).Select(f => f.Id).FirstOrDefault();
+                    if (!string.IsNullOrEmpty(importFolderId))
+                    {
+                        //Console.WriteLine($"importFolderId:{importFolderId}");
+                        accountFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(accountName) && f.Parents.Contains(importFolderId)).Select(f => f.Id).FirstOrDefault();
+                        if (!string.IsNullOrEmpty(accountFolderId))
+                        {
+                            //Console.WriteLine($"accountFolderId:{accountFolderId}");
+                            productsFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(SheetsCatalogImportConstants.FolderNames.PRODUCTS) && f.Parents.Contains(accountFolderId)).Select(f => f.Id).FirstOrDefault();
+                        }
+                    }
+                }
+            }
+
+            // If any essential folders are missing verify and create the folder structure.
+            if (string.IsNullOrEmpty(productsFolderId))
+            {
+                folderIds = null;
+                _context.Vtex.Logger.Info("GetSheetLink", null, "Verifying folder structure.");
+                Dictionary<string, string> folders = await this.ListFolders();   // Id, Name
+
+                if (folders == null)
+                {
+                    return ($"Error accessing Drive.");
+                }
+
+                if (!folders.ContainsValue(SheetsCatalogImportConstants.FolderNames.IMPORT))
+                {
+                    importFolderId = await this.CreateFolder(SheetsCatalogImportConstants.FolderNames.IMPORT);
+                }
+                else
+                {
+                    importFolderId = folders.FirstOrDefault(x => x.Value == SheetsCatalogImportConstants.FolderNames.IMPORT).Key;
+                }
+
+                if (string.IsNullOrEmpty(importFolderId))
+                {
+                    _context.Vtex.Logger.Info("GetSheetLink", null, $"Could not find '{SheetsCatalogImportConstants.FolderNames.IMPORT}' folder");
+                    return ($"Could not find {SheetsCatalogImportConstants.FolderNames.IMPORT} folder");
+                }
+
+                folders = await this.ListFolders(importFolderId);
+
+                if (!folders.ContainsValue(accountName))
+                {
+                    accountFolderId = await this.CreateFolder(accountName, importFolderId);
+                }
+                else
+                {
+                    accountFolderId = folders.FirstOrDefault(x => x.Value == accountName).Key;
+                }
+
+                if (string.IsNullOrEmpty(accountFolderId))
+                {
+                    _context.Vtex.Logger.Info("GetSheetLink", null, $"Could not find {accountFolderId} folder");
+                    return ($"Could not find {accountFolderId} folder");
+                }
+
+                folders = await this.ListFolders(accountFolderId);
+
+                if (!folders.ContainsValue(SheetsCatalogImportConstants.FolderNames.PRODUCTS))
+                {
+                    productsFolderId = await this.CreateFolder(SheetsCatalogImportConstants.FolderNames.PRODUCTS, accountFolderId);
+                }
+                else
+                {
+                    productsFolderId = folders.FirstOrDefault(x => x.Value == SheetsCatalogImportConstants.FolderNames.PRODUCTS).Key;
+                }
+
+                if (string.IsNullOrEmpty(productsFolderId))
+                {
+                    _context.Vtex.Logger.Info("GetSheetLink", null, $"Could not find {productsFolderId} folder");
+                    return ($"Could not find {productsFolderId} folder");
+                }
+            }
+
+            if (folderIds == null)
+            {
+                folderIds = new FolderIds
+                {
+                    AccountFolderId = accountFolderId,
+                    ImportFolderId = importFolderId,
+                    ProductsFolderId = productsFolderId
+                };
+
+                await _sheetsCatalogImportRepository.SaveFolderIds(folderIds, accountName);
+            }
+
+            if (folderIds != null)
+            {
                 ListFilesResponse spreadsheets = await this.ListSheetsInFolder(productsFolderId);
                 List<string> links = new List<string>();
                 if (spreadsheets != null)

@@ -10,5 +10,7 @@
   "admin/sheets-catalog-import.setup.button": "admin/sheets-catalog-import.setup.button",
   "admin/sheets-catalog-import.catalog-product.title": "admin/sheets-catalog-import.catalog-product.title",
   "admin/sheets-catalog-import.sheet-link.description": "admin/sheets-catalog-import.sheet-link.description",
-  "admin/sheets-catalog-import.sheet-import.description": "admin/sheets-catalog-import.description"
+  "admin/sheets-catalog-import.sheet-import.description": "admin/sheets-catalog-import.description",
+  "admin/sheets-catalog-import.create-sheet.description": "admin/sheets-catalog-import.create-sheet.description",
+  "admin/sheets-catalog-import.create-sheet.button": "admin/sheets-catalog-import.create-sheet.button"
 }

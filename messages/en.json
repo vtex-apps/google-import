@@ -9,5 +9,7 @@
   "admin/sheets-catalog-import.setup.button": "Grant Access",
   "admin/sheets-catalog-import.catalog-product.title": "Product Catalog Import",
   "admin/sheets-catalog-import.sheet-link.description": "Link to Spreadsheet",
-  "admin/sheets-catalog-import.sheet-import.description": "Import Products to Catalog"
+  "admin/sheets-catalog-import.sheet-import.description": "Import Products to Catalog",
+  "admin/sheets-catalog-import.create-sheet.description": "Create Spreadsheet",
+  "admin/sheets-catalog-import.create-sheet.button": "Create Sheet"
 }
