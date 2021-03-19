@@ -218,266 +218,296 @@ namespace SheetsCatalogImport.Services
                         if (headerIndexDictionary.ContainsKey("sku specs") && headerIndexDictionary["sku specs"] < dataValues.Count())
                             skuSpecs = dataValues[headerIndexDictionary["sku specs"]];
 
-                        ProductRequest productRequest = new ProductRequest
-                        {
-                            Id = await ParseLong(productid),
-                            Name = productName,
-                            CategoryPath = category,
-                            BrandName = brand,
-                            RefId = productReferenceCode,
-                            Title = productName,
-                            LinkId = $"{productName}-{productReferenceCode}",
-                            Description = productDescription,
-                            ReleaseDate = DateTime.Now.ToString(),
-                            KeyWords = searchKeywords,
-                            IsVisible = true,
-                            IsActive = true,
-                            TaxCode = string.Empty,
-                            MetaTagDescription = metaTagDescription,
-                            ShowWithoutStock = true,
-                            Score = 1
-                        };
+                        string status = string.Empty;
+                        if (headerIndexDictionary.ContainsKey("status") && headerIndexDictionary["status"] < dataValues.Count())
+                            status = dataValues[headerIndexDictionary["status"]];
 
-                        UpdateResponse productUpdateResponse = await this.CreateProduct(productRequest);
-
-                        sb.AppendLine($"Product: [{productUpdateResponse.StatusCode}] {productUpdateResponse.Message}");
-                        long productId = 0;
-                        if (productUpdateResponse.Success)
+                        if (status.Equals("Done"))
                         {
-                            ProductResponse productResponse = JsonConvert.DeserializeObject<ProductResponse>(productUpdateResponse.Message);
-                            productId = productResponse.Id;
-                            success = true;
+                            // skip
                         }
-                        else if(productUpdateResponse.StatusCode.Equals("Conflict"))
+                        else
                         {
-                            // 409 - Same ID "Product already created with this Id"
-                            // 409 - Same RefId "There is already a product created with the same RefId with Product Id 100081202"
-                            // 409 - Same link Id "There is already a product with the same LinkId with Product Id 100081169"
-                            if(productUpdateResponse.Message.Contains("Product already created with this Id"))
+                            ProductRequest productRequest = new ProductRequest
                             {
-                                //productId = productRequest.Id ?? 0;
+                                Id = await ParseLong(productid),
+                                Name = productName,
+                                CategoryPath = category,
+                                BrandName = brand,
+                                RefId = productReferenceCode,
+                                Title = productName,
+                                LinkId = $"{productName}-{productReferenceCode}",
+                                Description = productDescription,
+                                ReleaseDate = DateTime.Now.ToString(),
+                                KeyWords = searchKeywords,
+                                IsVisible = true,
+                                IsActive = true,
+                                TaxCode = string.Empty,
+                                MetaTagDescription = metaTagDescription,
+                                ShowWithoutStock = await ParseBool(displayIfOutOfStock),
+                                Score = 1
+                            };
+
+                            UpdateResponse productUpdateResponse = await this.CreateProduct(productRequest);
+
+                            sb.AppendLine($"Product: [{productUpdateResponse.StatusCode}] {productUpdateResponse.Message}");
+                            long productId = 0;
+                            if (productUpdateResponse.Success)
+                            {
+                                ProductResponse productResponse = JsonConvert.DeserializeObject<ProductResponse>(productUpdateResponse.Message);
+                                productId = productResponse.Id;
                                 success = true;
                             }
-                            else if(productUpdateResponse.Message.Contains("There is already a product"))
+                            else if (productUpdateResponse.StatusCode.Equals("Conflict"))
                             {
-                                //string[] splitResponse = productUpdateResponse.Message.Split(" ");
-                                //productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
-                                success = false;
+                                // 409 - Same ID "Product already created with this Id"
+                                // 409 - Same RefId "There is already a product created with the same RefId with Product Id 100081202"
+                                // 409 - Same link Id "There is already a product with the same LinkId with Product Id 100081169"
+                                if (productUpdateResponse.Message.Contains("Product already created with this Id"))
+                                {
+                                    //productId = productRequest.Id ?? 0;
+                                    success = true;
+                                }
+                                else if (productUpdateResponse.Message.Contains("There is already a product"))
+                                {
+                                    //string[] splitResponse = productUpdateResponse.Message.Split(" ");
+                                    //productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
+                                    success = false;
+                                }
+                                else
+                                {
+                                    // What to do in this case?
+                                    success = false;
+                                }
                             }
                             else
                             {
                                 // What to do in this case?
                                 success = false;
                             }
-                        }
-                        else
-                        {
-                            // What to do in this case?
-                            success = false;
-                        }
 
-                        double? packagedHeight = await ParseDouble(height);
-                        double? packagedLength = await ParseDouble(length);
-                        double? packagedWidth = await ParseDouble(width);
-
-                        SkuRequest skuRequest = new SkuRequest
-                        {
-                            Id = await ParseLong(skuid),
-                            ProductId = await ParseLong(productid) ?? 0,
-                            IsActive = true,
-                            Name = skuName,
-                            RefId = skuReferenceCode,
-                            PackagedHeight = await ParseDouble(height),
-                            PackagedLength = await ParseDouble(length),
-                            PackagedWidth = await ParseDouble(width),
-                            PackagedWeightKg = await ParseDouble(weight),
-                            CubicWeight = (packagedHeight * packagedLength * packagedWidth) / SheetsCatalogImportConstants.VOLUMETIC_FACTOR, // https://www.efulfillmentservice.com/2012/11/how-to-calculate-dimensional-weight/
-                            IsKit = false,
-                            CommercialConditionId = 1,
-                            MeasurementUnit = "un",
-                            UnitMultiplier = 1,
-                            KitItensSellApart = false
-                        };
-
-
-                        UpdateResponse skuUpdateResponse = await this.CreateSku(skuRequest);
-                        sb.AppendLine($"Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
-                        if (skuUpdateResponse.StatusCode.Equals("Conflict"))
-                        {
-                            if (skuUpdateResponse.Message.Contains("Sku can not be created because the RefId is registered in Sku id"))
+                            if (success)
                             {
-                                //string[] splitResponse = skuUpdateResponse.Message.Split(" ");
-                                //skuid = splitResponse[splitResponse.Length - 1];
-                                success &= false;
-                            }
-                            else if(skuUpdateResponse.Message.Contains("Sku already created with this Id"))
-                            {
-                                success &= true;
-                            }
-                        }
-                        else
-                        {
-                            success &= skuUpdateResponse.Success;
-                        }
+                                double? packagedHeight = await ParseDouble(height);
+                                double? packagedLength = await ParseDouble(length);
+                                double? packagedWidth = await ParseDouble(width);
 
-                        if (!string.IsNullOrEmpty(skuEanGtin))
-                        {
-                            UpdateResponse eanResponse = await this.CreateEANGTIN(skuid, skuEanGtin);
-                            sb.AppendLine($"EAN/GTIN: [{eanResponse.StatusCode}] {eanResponse.Message}");
-                            success &= eanResponse.Success;
-                        }
-                        else
-                        {
-                            sb.AppendLine($"EAN/GTIN: Empty");
-                        }
-
-                        UpdateResponse updateResponse = null;
-                        bool imageSuccess = true;
-                        bool haveImage = false;
-                        StringBuilder imageResults = new StringBuilder();
-                        if(!string.IsNullOrEmpty(imageUrl1))
-                        {
-                            haveImage = true;
-                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-1", $"{skuName}-1", true, imageUrl1);
-                            imageSuccess &= updateResponse.Success;
-                            imageResults.AppendLine($"1: {updateResponse.Message}");
-                        }
-
-                        if (!string.IsNullOrEmpty(imageUrl2))
-                        {
-                            haveImage = true;
-                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-2", $"{skuName}-2", false, imageUrl2);
-                            imageSuccess &= updateResponse.Success;
-                            imageResults.AppendLine($"2: {updateResponse.Message}");
-                        }
-
-                        if (!string.IsNullOrEmpty(imageUrl3))
-                        {
-                            haveImage = true;
-                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-3", $"{skuName}-3", false, imageUrl3);
-                            imageSuccess &= updateResponse.Success;
-                            imageResults.AppendLine($"3: {updateResponse.Message}");
-                        }
-
-                        if (!string.IsNullOrEmpty(imageUrl4))
-                        {
-                            haveImage = true;
-                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-4", $"{skuName}-4", false, imageUrl4);
-                            imageSuccess &= updateResponse.Success;
-                            imageResults.AppendLine($"4: {updateResponse.Message}");
-                        }
-
-                        if (!string.IsNullOrEmpty(imageUrl5))
-                        {
-                            haveImage = true;
-                            updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-5", $"{skuName}-5", false, imageUrl5);
-                            imageSuccess &= updateResponse.Success;
-                            imageResults.AppendLine($"5: {updateResponse.Message}");
-                        }
-
-                        if (haveImage)
-                        {
-                            success &= imageSuccess;
-                            sb.AppendLine($"Images: {imageSuccess} {imageResults}");
-                        }
-                        else
-                        {
-                            sb.AppendLine($"Images: Empty");
-                        }
-
-                        if (!string.IsNullOrEmpty(msrp) && !string.IsNullOrEmpty(sellingPrice))
-                        {
-                            CreatePrice createPrice = new CreatePrice
-                            {
-                                BasePrice = await ParseCurrency(msrp) ?? 0,
-                                ListPrice = await ParseCurrency(sellingPrice) ?? 0
-                            };
-
-                            UpdateResponse priceResponse = await this.CreatePrice(skuid, createPrice);
-                            success &= priceResponse.Success;
-                            sb.AppendLine($"Price: [{priceResponse.StatusCode}] {priceResponse.Message}");
-                        }
-                        else
-                        {
-                            sb.AppendLine($"Price: Empty");
-                            success = false;
-                        }
-
-                        GetWarehousesResponse[] getWarehousesResponse = await GetWarehouses();
-                        //GetWarehousesResponse[] getWarehousesResponse = await ListAllWarehouses();
-                        if (getWarehousesResponse != null)
-                        {
-                            string warehouseId = getWarehousesResponse.Select(w => w.Id).FirstOrDefault();
-                            if (!string.IsNullOrEmpty(warehouseId))
-                            {
-                                InventoryRequest inventoryRequest = new InventoryRequest
+                                SkuRequest skuRequest = new SkuRequest
                                 {
-                                    DateUtcOnBalanceSystem = null,
-                                    Quantity = await ParseLong(availableQuantity) ?? 0,
-                                    UnlimitedQuantity = false
+                                    Id = await ParseLong(skuid),
+                                    ProductId = await ParseLong(productid) ?? 0,
+                                    IsActive = true,
+                                    Name = skuName,
+                                    RefId = skuReferenceCode,
+                                    PackagedHeight = await ParseDouble(height),
+                                    PackagedLength = await ParseDouble(length),
+                                    PackagedWidth = await ParseDouble(width),
+                                    PackagedWeightKg = await ParseDouble(weight),
+                                    CubicWeight = (packagedHeight * packagedLength * packagedWidth) / SheetsCatalogImportConstants.VOLUMETIC_FACTOR, // https://www.efulfillmentservice.com/2012/11/how-to-calculate-dimensional-weight/
+                                    IsKit = false,
+                                    CommercialConditionId = 1,
+                                    MeasurementUnit = "un",
+                                    UnitMultiplier = 1,
+                                    KitItensSellApart = false
                                 };
 
-                                UpdateResponse inventoryResponse = await this.SetInventory(skuid, warehouseId, inventoryRequest);
-                                success &= inventoryResponse.Success;
-                                sb.AppendLine($"Inventory: [{inventoryResponse.StatusCode}] {inventoryResponse.Message}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"Inventory: No Warehouse");
-                                success = false;
-                            }
-                        }
-                        else
-                        {
-                            sb.AppendLine($"Inventory: Null Warehouse");
-                            success = false;
-                        }
 
-                        if(!string.IsNullOrEmpty(productSpecs))
-                        {
-                            string[] allSpecs = productSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-                            for (int i = 0; i < allSpecs.Length; i++)
-                            {
-                                Console.WriteLine($"Processing Spec ({i}) '{allSpecs[i]}'");
-                                string[] specsArr = allSpecs[i].Split(':');
-                                string specName = specsArr[0];
-                                string[] specValueArr = specsArr[1].Split(',');
-
-                                SpecAttr prodSpec = new SpecAttr
+                                UpdateResponse skuUpdateResponse = await this.CreateSku(skuRequest);
+                                sb.AppendLine($"Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
+                                if (skuUpdateResponse.StatusCode.Equals("Conflict"))
                                 {
-                                    GroupName = "Default",
-                                    RootLevelSpecification = true,
-                                    FieldName = specName,
-                                    FieldValues = specValueArr
-                                };
-
-                                UpdateResponse prodSpecResponse = await this.SetProdSpecs(productid, prodSpec);
-                                success &= prodSpecResponse.Success;
-                                sb.AppendLine($"Prod Spec {i + 1}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
-                            }
-                        }
-
-                        if (!string.IsNullOrEmpty(skuSpecs))
-                        {
-                            string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-                            for (int i = 0; i < allSpecs.Length; i++)
-                            {
-                                Console.WriteLine($"Processing Sku Spec ({i}) '{allSpecs[i]}'");
-                                string[] specsArr = allSpecs[i].Split(':');
-                                string specName = specsArr[0];
-                                string specValue = specsArr[1];
-
-                                SpecAttr skuSpec = new SpecAttr
+                                    if (skuUpdateResponse.Message.Contains("Sku can not be created because the RefId is registered in Sku id"))
+                                    {
+                                        //string[] splitResponse = skuUpdateResponse.Message.Split(" ");
+                                        //skuid = splitResponse[splitResponse.Length - 1];
+                                        success &= false;
+                                    }
+                                    else if (skuUpdateResponse.Message.Contains("Sku already created with this Id"))
+                                    {
+                                        success &= true;
+                                    }
+                                }
+                                else
                                 {
-                                    GroupName = "Default",
-                                    RootLevelSpecification = true,
-                                    FieldName = specName,
-                                    FieldValue = specValue
-                                };
+                                    success &= skuUpdateResponse.Success;
+                                }
+                            }
 
-                                UpdateResponse prodSpecResponse = await this.SetSkuSpec(skuid, skuSpec);
-                                success &= prodSpecResponse.Success;
-                                sb.AppendLine($"Sku Spec {i + 1}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
+                            if (success)
+                            {
+                                if (!string.IsNullOrEmpty(skuEanGtin))
+                                {
+                                    UpdateResponse eanResponse = await this.CreateEANGTIN(skuid, skuEanGtin);
+                                    sb.AppendLine($"EAN/GTIN: [{eanResponse.StatusCode}] {eanResponse.Message}");
+                                    success &= eanResponse.Success;
+                                }
+                                else
+                                {
+                                    sb.AppendLine($"EAN/GTIN: Empty");
+                                }
+                            }
+
+                            if (success)
+                            {
+                                UpdateResponse updateResponse = null;
+                                bool imageSuccess = true;
+                                bool haveImage = false;
+                                StringBuilder imageResults = new StringBuilder();
+                                if (!string.IsNullOrEmpty(imageUrl1))
+                                {
+                                    haveImage = true;
+                                    updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-1", $"{skuName}-1", true, imageUrl1);
+                                    imageSuccess &= updateResponse.Success;
+                                    imageResults.AppendLine($"1: {updateResponse.Message}");
+                                }
+
+                                if (!string.IsNullOrEmpty(imageUrl2))
+                                {
+                                    haveImage = true;
+                                    updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-2", $"{skuName}-2", false, imageUrl2);
+                                    imageSuccess &= updateResponse.Success;
+                                    imageResults.AppendLine($"2: {updateResponse.Message}");
+                                }
+
+                                if (!string.IsNullOrEmpty(imageUrl3))
+                                {
+                                    haveImage = true;
+                                    updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-3", $"{skuName}-3", false, imageUrl3);
+                                    imageSuccess &= updateResponse.Success;
+                                    imageResults.AppendLine($"3: {updateResponse.Message}");
+                                }
+
+                                if (!string.IsNullOrEmpty(imageUrl4))
+                                {
+                                    haveImage = true;
+                                    updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-4", $"{skuName}-4", false, imageUrl4);
+                                    imageSuccess &= updateResponse.Success;
+                                    imageResults.AppendLine($"4: {updateResponse.Message}");
+                                }
+
+                                if (!string.IsNullOrEmpty(imageUrl5))
+                                {
+                                    haveImage = true;
+                                    updateResponse = await this.CreateSkuFile(skuid, $"{skuName}-5", $"{skuName}-5", false, imageUrl5);
+                                    imageSuccess &= updateResponse.Success;
+                                    imageResults.AppendLine($"5: {updateResponse.Message}");
+                                }
+
+                                if (haveImage)
+                                {
+                                    success &= imageSuccess;
+                                    sb.AppendLine($"Images: {imageSuccess} {imageResults}");
+                                }
+                                else
+                                {
+                                    sb.AppendLine($"Images: Empty");
+                                }
+                            }
+
+                            if (success)
+                            {
+                                if (!string.IsNullOrEmpty(msrp) && !string.IsNullOrEmpty(sellingPrice))
+                                {
+                                    CreatePrice createPrice = new CreatePrice
+                                    {
+                                        BasePrice = await ParseCurrency(msrp) ?? 0,
+                                        ListPrice = await ParseCurrency(sellingPrice) ?? 0,
+                                        CostPrice = await ParseCurrency(msrp) ?? 0
+                                    };
+
+                                    UpdateResponse priceResponse = await this.CreatePrice(skuid, createPrice);
+                                    success &= priceResponse.Success;
+                                    sb.AppendLine($"Price: [{priceResponse.StatusCode}] {priceResponse.Message}");
+                                }
+                                else
+                                {
+                                    sb.AppendLine($"Price: Empty");
+                                    success = false;
+                                }
+                            }
+
+                            if (success)
+                            {
+                                GetWarehousesResponse[] getWarehousesResponse = await GetWarehouses();
+                                //GetWarehousesResponse[] getWarehousesResponse = await ListAllWarehouses();
+                                if (getWarehousesResponse != null)
+                                {
+                                    string warehouseId = getWarehousesResponse.Select(w => w.Id).FirstOrDefault();
+                                    if (!string.IsNullOrEmpty(warehouseId))
+                                    {
+                                        InventoryRequest inventoryRequest = new InventoryRequest
+                                        {
+                                            DateUtcOnBalanceSystem = null,
+                                            Quantity = await ParseLong(availableQuantity) ?? 0,
+                                            UnlimitedQuantity = false
+                                        };
+
+                                        UpdateResponse inventoryResponse = await this.SetInventory(skuid, warehouseId, inventoryRequest);
+                                        success &= inventoryResponse.Success;
+                                        sb.AppendLine($"Inventory: [{inventoryResponse.StatusCode}] {inventoryResponse.Message}");
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"Inventory: No Warehouse");
+                                        success = false;
+                                    }
+                                }
+                                else
+                                {
+                                    sb.AppendLine($"Inventory: Null Warehouse");
+                                    success = false;
+                                }
+                            }
+
+                            if (success)
+                            {
+                                if (!string.IsNullOrEmpty(productSpecs))
+                                {
+                                    string[] allSpecs = productSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                    for (int i = 0; i < allSpecs.Length; i++)
+                                    {
+                                        Console.WriteLine($"Processing Spec ({i}) '{allSpecs[i]}'");
+                                        string[] specsArr = allSpecs[i].Split(':');
+                                        string specName = specsArr[0];
+                                        string[] specValueArr = specsArr[1].Split(',');
+
+                                        SpecAttr prodSpec = new SpecAttr
+                                        {
+                                            GroupName = "Default",
+                                            RootLevelSpecification = true,
+                                            FieldName = specName,
+                                            FieldValues = specValueArr
+                                        };
+
+                                        UpdateResponse prodSpecResponse = await this.SetProdSpecs(productid, prodSpec);
+                                        success &= prodSpecResponse.Success;
+                                        sb.AppendLine($"Prod Spec {i + 1}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
+                                    }
+                                }
+
+                                if (!string.IsNullOrEmpty(skuSpecs))
+                                {
+                                    string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                    for (int i = 0; i < allSpecs.Length; i++)
+                                    {
+                                        Console.WriteLine($"Processing Sku Spec ({i}) '{allSpecs[i]}'");
+                                        string[] specsArr = allSpecs[i].Split(':');
+                                        string specName = specsArr[0];
+                                        string specValue = specsArr[1];
+
+                                        SpecAttr skuSpec = new SpecAttr
+                                        {
+                                            GroupName = "Default",
+                                            RootLevelSpecification = true,
+                                            FieldName = specName,
+                                            FieldValue = specValue
+                                        };
+
+                                        UpdateResponse prodSpecResponse = await this.SetSkuSpec(skuid, skuSpec);
+                                        success &= prodSpecResponse.Success;
+                                        sb.AppendLine($"Sku Spec {i + 1}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
+                                    }
+                                }
                             }
                         }
 
@@ -1437,6 +1467,28 @@ namespace SheetsCatalogImport.Services
                     Console.WriteLine($"    --------------- Could not parse {value}");
                     _context.Vtex.Logger.Warn("ParseLong", null, $"Could not parse {value}");
                     return null;
+                }
+            }
+        }
+
+        private async Task<bool> ParseBool(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+            else
+            {
+                bool retVal;
+                if (bool.TryParse(value, out retVal))
+                {
+                    return retVal;
+                }
+                else
+                {
+                    Console.WriteLine($"    --------------- Could not parse {value}");
+                    _context.Vtex.Logger.Warn("ParseBool", null, $"Could not parse {value}");
+                    return false;
                 }
             }
         }

@@ -12,5 +12,8 @@ namespace SheetsCatalogImport.Models
 
         [JsonProperty("listPrice")]
         public decimal ListPrice { get; set; }
+
+        [JsonProperty("costPrice")]
+        public decimal CostPrice { get; set; }
     }
 }

@@ -815,6 +815,7 @@ namespace SheetsCatalogImport.Services
             }
 
             int statusRow = headerIndexDictionary["status"];
+            int displayIfOutOfStockRow = headerIndexDictionary["display if out of stock"];
 
             GoogleSheetCreate googleSheetCreate = new GoogleSheetCreate
             {
@@ -1037,6 +1038,44 @@ namespace SheetsCatalogImport.Services
                                     {
                                         FrozenRowCount = 1
                                     }
+                                }
+                            }
+                        },
+                        new Request
+                        {
+                            SetDataValidation = new SetDataValidation
+                            {
+                                Range = new BatchUpdateRange
+                                {
+                                    StartRowIndex = 1,
+                                    EndRowIndex = SheetsCatalogImportConstants.DEFAULT_SHEET_SIZE,
+                                    SheetId = 0,
+                                    EndColumnIndex = displayIfOutOfStockRow + 1,
+                                    StartColumnIndex = displayIfOutOfStockRow
+                                },
+                                Rule = new Rule
+                                {
+                                    Condition = new Condition
+                                    {
+                                        Type = "ONE_OF_LIST",
+                                        Values = new Value[]
+                                        {
+                                            new Value
+                                            {
+                                                UserEnteredValue = string.Empty
+                                            },
+                                            new Value
+                                            {
+                                                UserEnteredValue = "TRUE"
+                                            },
+                                            new Value
+                                            {
+                                                UserEnteredValue = "FALSE"
+                                            }
+                                        }
+                                    },
+                                    InputMessage = $"Valid values: True / False",
+                                    Strict = true
                                 }
                             }
                         },
