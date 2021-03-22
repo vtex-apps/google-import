@@ -106,6 +106,12 @@ namespace SheetsCatalogImport.Services
                 if (response.IsSuccessStatusCode)
                 {
                     authUrl = responseContent;
+                    string siteUrl = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.FORWARDED_HOST];
+                    Console.WriteLine($"authUrl (before) = {authUrl}");
+                    Console.WriteLine($"siteUrl = {siteUrl}");
+                    authUrl = authUrl.Replace("state=", $"state={siteUrl}");
+                    //authUrl = $"{authUrl}&state={siteUrl}";
+                    Console.WriteLine($"authUrl (after) = {authUrl}");
                 }
                 else
                 {

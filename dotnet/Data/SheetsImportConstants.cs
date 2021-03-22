@@ -38,8 +38,8 @@ namespace SheetsCatalogImport.Data
 
         public const string GOOGLE_REPONSE_TYPE = "code";
         public const string GOOGLE_ACCESS_TYPE = "offline";
-        //public const string AUTH_SITE_BASE = "googleauth.myvtex.com";
-        public const string AUTH_SITE_BASE = "gauth--googleauth.myvtex.com";
+        public const string AUTH_SITE_BASE = "googleauth.myvtex.com";
+        //public const string AUTH_SITE_BASE = "gauth--googleauth.myvtex.com";
         //public const string AUTH_SITE_BASE = "gauth--sandboxusdev.myvtex.com";
         public const string REDIRECT_PATH = "return";
 
