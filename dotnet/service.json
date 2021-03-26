@@ -53,6 +53,10 @@
     "getCategoryTree": {
       "path": "/sheets-catalog-import/get-category-tree",
       "public": true
+    },
+    "export": {
+      "path": "/sheets-catalog-import/export-catalog",
+      "public": true
     }
   }
 }
