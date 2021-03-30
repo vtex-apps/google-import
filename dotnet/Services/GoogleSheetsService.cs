@@ -826,6 +826,7 @@ namespace SheetsCatalogImport.Services
 
             int statusRow = headerIndexDictionary["status"];
             int displayIfOutOfStockRow = headerIndexDictionary["display if out of stock"];
+            int updateRow = headerIndexDictionary["update"];
 
             GoogleSheetCreate googleSheetCreate = new GoogleSheetCreate
             {
@@ -1001,7 +1002,7 @@ namespace SheetsCatalogImport.Services
                     Range = $"{sheetLabel}!A2:{lastHeaderColumnLetter}2",
                     Values = new string[][]
                     {
-                        new string[] { "10","500", "Example/Sample", "Example", "Example Product", "X-MP","Example Sku","8888", "SK-X-MP", "1","1","1","1","This is an example product","example,sample,demo", "This is an example product", "https://sample.demo.com/example.jpg", "","","","","TRUE","80.00","74.99","100","Material:Plastic,Wood,Glass\nBodyPart:Back,Front\nColor:Red,Yellow,Blue","Color:Blue\nMaterial:Plastic","","" },
+                        new string[] { "10","500", "Example/Sample", "Example", "Example Product", "X-MP","Example Sku","8888", "SK-X-MP", "1","1","1","1","This is an example product","example,sample,demo", "This is an example product", "https://sample.demo.com/example.jpg", "","","","","TRUE","80.00","74.99","100","Material:Plastic,Wood,Glass\nBodyPart:Back,Front\nColor:Red,Yellow,Blue","Color:Blue\nMaterial:Plastic","FALSE","","" },
                     }
                 };
 
@@ -1074,6 +1075,44 @@ namespace SheetsCatalogImport.Services
                                     SheetId = 0,
                                     EndColumnIndex = displayIfOutOfStockRow + 1,
                                     StartColumnIndex = displayIfOutOfStockRow
+                                },
+                                Rule = new Rule
+                                {
+                                    Condition = new Condition
+                                    {
+                                        Type = "ONE_OF_LIST",
+                                        Values = new Value[]
+                                        {
+                                            new Value
+                                            {
+                                                UserEnteredValue = string.Empty
+                                            },
+                                            new Value
+                                            {
+                                                UserEnteredValue = "TRUE"
+                                            },
+                                            new Value
+                                            {
+                                                UserEnteredValue = "FALSE"
+                                            }
+                                        }
+                                    },
+                                    InputMessage = $"Valid values: True / False",
+                                    Strict = true
+                                }
+                            }
+                        },
+                        new Request
+                        {
+                            SetDataValidation = new SetDataValidation
+                            {
+                                Range = new BatchUpdateRange
+                                {
+                                    StartRowIndex = 1,
+                                    EndRowIndex = SheetsCatalogImportConstants.DEFAULT_SHEET_SIZE,
+                                    SheetId = 0,
+                                    EndColumnIndex = updateRow + 1,
+                                    StartColumnIndex = updateRow
                                 },
                                 Rule = new Rule
                                 {

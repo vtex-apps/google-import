@@ -141,5 +141,13 @@
             Response.Headers.Add("Cache-Control", "no-cache");
             await _sheetsCatalogImportRepository.ClearImportLock();
         }
+
+        public async Task<IActionResult> Export()
+        {
+            Response.Headers.Add("Cache-Control", "no-cache");
+            var queryString = HttpContext.Request.Query;
+            string query = queryString["q"];
+            return Json(await _vtexAPIService.ExportToSheet(query));
+        }
     }
 }
