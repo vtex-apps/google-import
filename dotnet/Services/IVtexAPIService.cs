@@ -15,6 +15,6 @@ namespace SheetsCatalogImport.Services
         Task<GetCategoryTreeResponse[]> GetCategoryTree(int categoryLevels);
         Task<GetBrandListResponse[]> GetBrandList();
         Task<long[]> ListSkuIds(int page, int pagesize);
-        Task<string> ExportToSheet();
+        Task<string> ExportToSheet(string query);
     }
 }

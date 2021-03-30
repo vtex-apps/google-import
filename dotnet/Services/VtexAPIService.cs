@@ -577,7 +577,7 @@ namespace SheetsCatalogImport.Services
             return response;
         }
 
-        public async Task<string> ExportToSheet()
+        public async Task<string> ExportToSheet(string query)
         {
             int writeBlockSize = 5;
             string[][] arrayToWrite = new string[writeBlockSize+1][];
@@ -626,6 +626,17 @@ namespace SheetsCatalogImport.Services
                     GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(10);
                     Dictionary<long, string> categoryIds = await GetCategoryId(categoryTree);
                     //GetBrandListResponse[] brandList = await GetBrandList();
+                    if(!string.IsNullOrEmpty(query))
+                    {
+                        string[] queryArr = query.Split(':');
+                        string queryType = queryArr[0];
+                        string queryParam = queryArr[1];
+                        if (queryType.ToLower().Equals("category"))
+                        {
+                            categoryIds = categoryIds.Where(c => c.Value.Contains(queryParam, StringComparison.OrdinalIgnoreCase)).ToDictionary(c => c.Key, c => c.Value);
+                        }
+                    }
+
                     long index = 0;
                     long offset = 0;
                     foreach (long categoryId in categoryIds.Keys)
@@ -682,6 +693,10 @@ namespace SheetsCatalogImport.Services
                                     //arrayToWrite[index][headerIndexDictionary["image url 5"]] = skuAndContextResponse.ImageUrl;
                                     //arrayToWrite[index][headerIndexDictionary["display if out of stock"]] = 
                                     //arrayToWrite[index][headerIndexDictionary["msrp"]] = 
+                                    //arrayToWrite[index][headerIndexDictionary["selling price (price to gpp)"]] = 
+                                    //arrayToWrite[index][headerIndexDictionary["available quantity"]] = 
+                                    //arrayToWrite[index][headerIndexDictionary["productspecs"]] = 
+                                    //arrayToWrite[index][headerIndexDictionary["sku specs"]] = 
                                     //productId, skuId.ToString(), categoryIds[categoryId], brandName, getProductByIdResponse.Name, getProductByIdResponse.RefId, skuAndContextResponse.NameComplete, "EAN", "SKU REF", skuAndContextResponse.Dimension.Height.ToString(), skuAndContextResponse.Dimension.Width.ToString(), skuAndContextResponse.Dimension.Length.ToString(), skuAndContextResponse.Dimension.Weight.ToString(), getProductByIdResponse.Description, "SEARCH KEYWORDS", getProductByIdResponse.MetaTagDescription, skuAndContextResponse.ImageUrl, "", "", "", "", "", "0.00", "0.00", "0", "Material", "Color", "", "" 
 
 

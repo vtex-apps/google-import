@@ -145,7 +145,9 @@
         public async Task<IActionResult> Export()
         {
             Response.Headers.Add("Cache-Control", "no-cache");
-            return Json(await _vtexAPIService.ExportToSheet());
+            var queryString = HttpContext.Request.Query;
+            string query = queryString["q"];
+            return Json(await _vtexAPIService.ExportToSheet(query));
         }
     }
 }
