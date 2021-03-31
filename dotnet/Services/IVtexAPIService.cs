@@ -16,5 +16,6 @@ namespace SheetsCatalogImport.Services
         Task<GetBrandListResponse[]> GetBrandList();
         Task<long[]> ListSkuIds(int page, int pagesize);
         Task<string> ExportToSheet(string query);
+        Task<SearchTotals> SearchTotal(string query);
     }
 }
