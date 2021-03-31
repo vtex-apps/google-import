@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Changed behavior when product exists
 
+## [0.0.3] - 2021-03-31
+
+### Changed
+
+- Changed behavior when product exists
+
 ## [0.0.2] - 2021-03-30
 
 ### Added
