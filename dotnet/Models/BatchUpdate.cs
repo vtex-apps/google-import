@@ -24,6 +24,18 @@ namespace SheetsCatalogImport.Models
 
         [JsonProperty("autoResizeDimensions", NullValueHandling = NullValueHandling.Ignore)]
         public AutoResizeDimensions AutoResizeDimensions { get; set; }
+
+        [JsonProperty("insertDimension")]
+        public InsertDimension InsertDimension { get; set; }
+    }
+
+    public class InsertDimension
+    {
+        [JsonProperty("range")]
+        public InsertRange Range { get; set; }
+
+        [JsonProperty("inheritFromBefore")]
+        public bool InheritFromBefore { get; set; }
     }
 
     public class AutoResizeDimensions
@@ -138,6 +150,21 @@ namespace SheetsCatalogImport.Models
 
         [JsonProperty("endColumnIndex")]
         public long? EndColumnIndex { get; set; }
+    }
+
+    public class InsertRange
+    {
+        [JsonProperty("sheetId")]
+        public long SheetId { get; set; }
+
+        [JsonProperty("dimension")]
+        public string Dimension { get; set; }
+
+        [JsonProperty("startIndex")]
+        public long StartIndex { get; set; }
+
+        [JsonProperty("endIndex")]
+        public long EndIndex { get; set; }
     }
 
     public class UpdateSheetProperties

@@ -121,6 +121,46 @@ namespace SheetsCatalogImport.Services
 
                     string statusColumnLetter = await GetColumnLetter(headerIndexDictionary["status"]);
                     string messageColumnLetter = await GetColumnLetter(headerIndexDictionary["message"]);
+                    //if (!headerIndexDictionary.ContainsKey("date"))
+                    //{
+                    //    BatchUpdate batchUpdate = new BatchUpdate
+                    //    {
+                    //        Requests = new Request[]
+                    //        {
+                    //            new Request
+                    //            {
+                    //                InsertDimension = new InsertDimension
+                    //                {
+                    //                    InheritFromBefore = false,
+                    //                    Range = new InsertRange
+                    //                    {
+                    //                        SheetId = 0,
+                    //                        Dimension = "COLUMNS",
+                    //                        StartIndex = headerIndexDictionary["status"] + 1,
+                    //                        EndIndex = headerIndexDictionary["message"] + 1
+                    //                    }
+                    //                }
+                    //            }
+                    //        }
+                    //    };
+
+                    //    var updateSheet = await _googleSheetsService.UpdateSpreadsheet(sheetId, batchUpdate);
+                    //    sheetContent = await _googleSheetsService.GetSheet(sheetId, string.Empty);
+                    //    valueRange = googleSheet.ValueRanges[0].Range;
+                    //    sheetName = valueRange.Split("!")[0];
+                    //    sheetHeader = googleSheet.ValueRanges[0].Values[0];
+                    //    foreach (string header in sheetHeader)
+                    //    {
+                    //        //Console.WriteLine($"({headerIndex}) sheetHeader = {header}");
+                    //        headerIndexDictionary.Add(header.ToLower(), headerIndex);
+                    //        headerIndex++;
+                    //    }
+
+                    //    statusColumnLetter = await GetColumnLetter(headerIndexDictionary["status"]);
+                    //    messageColumnLetter = await GetColumnLetter(headerIndexDictionary["message"]);
+                    //}
+
+                    //string dateColumnLetter = await GetColumnLetter(headerIndexDictionary["date"]);
                     Console.WriteLine($"Status column = '{statusColumnLetter}' Message = '{messageColumnLetter}'");
 
                     for (int index = 1; index < rowCount; index++)
@@ -234,6 +274,7 @@ namespace SheetsCatalogImport.Services
                         }
                         else
                         {
+                            sb.AppendLine(DateTime.Now.ToString());
                             ProductRequest productRequest = new ProductRequest
                             {
                                 Id = await ParseLong(productid),
@@ -284,9 +325,24 @@ namespace SheetsCatalogImport.Services
                                 }
                                 else if (productUpdateResponse.Message.Contains("There is already a product"))
                                 {
-                                    //string[] splitResponse = productUpdateResponse.Message.Split(" ");
-                                    //productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
-                                    success = false;
+                                    if (string.IsNullOrEmpty(productid))
+                                    {
+                                        string[] splitResponse = productUpdateResponse.Message.Split(" ");
+                                        productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
+                                        if (productId > 0)
+                                        {
+                                            success = true;
+                                            sb.AppendLine($"Using Product Id {productId}");
+                                        }
+                                        else
+                                        {
+                                            success = false;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        success = false;
+                                    }
                                 }
                                 else
                                 {
@@ -332,9 +388,20 @@ namespace SheetsCatalogImport.Services
                                 {
                                     if (skuUpdateResponse.Message.Contains("Sku can not be created because the RefId is registered in Sku id"))
                                     {
-                                        //string[] splitResponse = skuUpdateResponse.Message.Split(" ");
-                                        //skuid = splitResponse[splitResponse.Length - 1];
-                                        success &= false;
+                                        if (string.IsNullOrEmpty(skuid))
+                                        {
+                                            string[] splitResponse = skuUpdateResponse.Message.Split(" ");
+                                            skuid = splitResponse[splitResponse.Length - 1];
+                                            if (string.IsNullOrEmpty(skuid))
+                                            {
+                                                success &= false;
+                                            }
+                                            else
+                                            {
+                                                success &= true;
+                                                sb.AppendLine($"Using Sku Id {skuid}");
+                                            }
+                                        }
                                     }
                                     else if (skuUpdateResponse.Message.Contains("Sku already created with this Id"))
                                     {
