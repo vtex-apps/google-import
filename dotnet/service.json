@@ -57,6 +57,10 @@
     "export": {
       "path": "/sheets-catalog-import/export-catalog",
       "public": true
+    },
+    "searchTotals": {
+      "path": "/sheets-catalog-import/search-totals",
+      "public": true
     }
   }
 }

@@ -149,5 +149,13 @@
             string query = queryString["q"];
             return Json(await _vtexAPIService.ExportToSheet(query));
         }
+
+        public async Task<IActionResult> SearchTotals()
+        {
+            Response.Headers.Add("Cache-Control", "no-cache");
+            var queryString = HttpContext.Request.Query;
+            string query = queryString["q"];
+            return Json(await _vtexAPIService.SearchTotal(query));
+        }
     }
 }
