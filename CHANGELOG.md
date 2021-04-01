@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed product and sku id parsing
+
 ## [0.0.4] - 2021-03-31
 
 ### Changed

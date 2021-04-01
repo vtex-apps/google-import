@@ -325,12 +325,17 @@ namespace SheetsCatalogImport.Services
                                 }
                                 else if (productUpdateResponse.Message.Contains("There is already a product"))
                                 {
+                                    Console.WriteLine(" --- There is already a product --- ");
                                     if (string.IsNullOrEmpty(productid))
                                     {
                                         string[] splitResponse = productUpdateResponse.Message.Split(" ");
-                                        productId = await ParseLong(splitResponse[splitResponse.Length - 1]) ?? 0;
+                                        string parsedProductId = splitResponse[splitResponse.Length - 1];
+                                        parsedProductId = parsedProductId.Remove(parsedProductId.Length - 1, 1);
+                                        Console.WriteLine($" ---  parsed product id {parsedProductId} --- ");
+                                        productId = await ParseLong(parsedProductId) ?? 0;
                                         if (productId > 0)
                                         {
+                                            productid = productId.ToString();
                                             success = true;
                                             sb.AppendLine($"Using Product Id {productId}");
                                         }
@@ -341,6 +346,7 @@ namespace SheetsCatalogImport.Services
                                     }
                                     else
                                     {
+                                        Console.WriteLine(" --- productid not empty --- ");
                                         success = false;
                                     }
                                 }
@@ -384,6 +390,13 @@ namespace SheetsCatalogImport.Services
 
                                 UpdateResponse skuUpdateResponse = await this.CreateSku(skuRequest);
                                 sb.AppendLine($"Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
+                                if(skuUpdateResponse.Success && string.IsNullOrEmpty(skuid))
+                                {
+                                    SkuResponse skuResponse = JsonConvert.DeserializeObject<SkuResponse>(skuUpdateResponse.Message);
+                                    skuid = skuResponse.Id.ToString();
+                                    sb.AppendLine($"Using Sku Id {skuid}");
+                                }
+
                                 if (skuUpdateResponse.StatusCode.Equals("Conflict"))
                                 {
                                     if (skuUpdateResponse.Message.Contains("Sku can not be created because the RefId is registered in Sku id"))
@@ -392,6 +405,7 @@ namespace SheetsCatalogImport.Services
                                         {
                                             string[] splitResponse = skuUpdateResponse.Message.Split(" ");
                                             skuid = splitResponse[splitResponse.Length - 1];
+                                            skuid = skuid.Remove(skuid.Length - 1, 1);
                                             if (string.IsNullOrEmpty(skuid))
                                             {
                                                 success &= false;
