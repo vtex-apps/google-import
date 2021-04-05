@@ -1268,6 +1268,9 @@ namespace SheetsCatalogImport.Services
 
                 bool moved = await this.MoveFile(sheetId, productsFolderId);
                 Console.WriteLine($"Moved? {moved}");
+
+                bool setPermission = await SetPermission(sheetId);
+                Console.WriteLine($"Set Permission? {setPermission}");
             }
 
             string result = string.IsNullOrEmpty(sheetId) ? "Error" : "Created";

@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Added delay after product creation and if Prod and Sku attributtes return TooManyRequests
+
 ## [0.0.5] - 2021-04-01
 
 ### Fixed
