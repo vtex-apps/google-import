@@ -49,6 +49,13 @@ namespace SheetsCatalogImport.GraphQL
                 {
                     return vtexAPIService.ProcessSheet();
                 });
+
+            Field<StringGraphType>(
+                "clearSheet",
+                resolve: context =>
+                {
+                    return vtexAPIService.ClearSheet();
+                });
         }
     }
 }

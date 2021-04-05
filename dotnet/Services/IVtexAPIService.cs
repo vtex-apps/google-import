@@ -17,5 +17,6 @@ namespace SheetsCatalogImport.Services
         Task<long[]> ListSkuIds(int page, int pagesize);
         Task<string> ExportToSheet(string query);
         Task<SearchTotals> SearchTotal(string query);
+        Task<string> ClearSheet();
     }
 }
