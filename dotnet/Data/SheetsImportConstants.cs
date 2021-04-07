@@ -31,7 +31,8 @@ namespace SheetsCatalogImport.Data
         public const string CONTENT_TYPE = "Content-Type";
         public const string HTTP_FORWARDED_HEADER = "HTTP_X_FORWARDED_FOR";
 
-        public const string BUCKET = "google-sheet-catalog";
+        //public const string BUCKET = "google-sheet-catalog";
+        public const string BUCKET = "google-drive";
         public const string CREDENTIALS = "google-credentials";
         public const string TOKEN = "google-token";
         public const string LOCK = "catalog-import-lock";
@@ -39,8 +40,6 @@ namespace SheetsCatalogImport.Data
         public const string GOOGLE_REPONSE_TYPE = "code";
         public const string GOOGLE_ACCESS_TYPE = "offline";
         public const string AUTH_SITE_BASE = "googleauth.myvtex.com";
-        //public const string AUTH_SITE_BASE = "gauth--googleauth.myvtex.com";
-        //public const string AUTH_SITE_BASE = "gauth--sandboxusdev.myvtex.com";
         public const string REDIRECT_PATH = "return";
 
         public const string AUTH_APP_PATH = "google-auth";
@@ -84,6 +83,14 @@ namespace SheetsCatalogImport.Data
 
             public const string IMPORT = "VTEX Import";
             public const string PRODUCTS = "Spreadsheet Import";
+        }
+
+        public class SheetNames
+        {
+            public const string SHEET_NAME = "VtexCatalogImport";
+            public const string PRODUCTS = "ProductsForImport";
+            public const string INSTRUCTIONS = "Instructions";
+            public const string IMAGES = "Images";
         }
 
         public class ProductDisplayModes

@@ -79,6 +79,21 @@
 
         public async Task<bool> SaveToken()
         {
+            bool success = false;
+            if ("post".Equals(HttpContext.Request.Method, StringComparison.OrdinalIgnoreCase))
+            {
+                string bodyAsText = await new System.IO.StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+                Token token = JsonConvert.DeserializeObject<Token>(bodyAsText);
+
+                success = await _sheetsCatalogImportRepository.SaveToken(token);
+                success &= await _googleSheetsService.ShareToken(token);
+            }
+
+            return success;
+        }
+
+        public async Task<bool> ShareToken()
+        {
             if ("post".Equals(HttpContext.Request.Method, StringComparison.OrdinalIgnoreCase))
             {
                 string bodyAsText = await new System.IO.StreamReader(HttpContext.Request.Body).ReadToEndAsync();

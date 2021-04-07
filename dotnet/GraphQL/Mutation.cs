@@ -56,6 +56,13 @@ namespace SheetsCatalogImport.GraphQL
                 {
                     return vtexAPIService.ClearSheet();
                 });
+
+            Field<StringGraphType>(
+                "addImages",
+                resolve: context =>
+                {
+                    return vtexAPIService.AddImagesToSheet();
+                });
         }
     }
 }

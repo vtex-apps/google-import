@@ -9,4 +9,6 @@ type Mutation {
   googleAuthorize: String
   createSheet: String
   processSheet: String
+  clearSheet: String
+  addImages: String
 }

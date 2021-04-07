@@ -2083,6 +2083,98 @@ namespace SheetsCatalogImport.Services
             return response;
         }
 
+        public async Task<ListFilesResponse> ListImageFiles()
+        {
+            // GET https://{{accountName}}.myvtex.com/google-drive-import/list-images
+
+            ListFilesResponse listFilesResponse = null;
+
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.myvtex.com/google-drive-import/list-images")
+                };
+
+                request.Headers.Add(SheetsCatalogImportConstants.USE_HTTPS_HEADER_NAME, "true");
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    listFilesResponse = JsonConvert.DeserializeObject<ListFilesResponse>(responseContent);
+                }
+                else
+                {
+                    _context.Vtex.Logger.Warn("ListImageFiles", null, $"Could not get image file list  [{response.StatusCode}]");
+                }
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("ListImageFiles", null, $"Error getting image file list", ex);
+            }
+
+            return listFilesResponse;
+        }
+
+        public async Task<string> AddImagesToSheet()
+        {
+            string response = string.Empty;
+            string importFolderId = null;
+            string accountFolderId = null;
+            string accountName = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME];
+
+            FolderIds folderIds = await _sheetsCatalogImportRepository.LoadFolderIds(accountName);
+            if (folderIds != null)
+            {
+                importFolderId = folderIds.ProductsFolderId;
+            }
+            else
+            {
+                Console.WriteLine("LoadFolderIds returned Null!");
+            }
+
+            Console.WriteLine($"ListSheetsInFolder {importFolderId}");
+            ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(importFolderId);
+            if (spreadsheets != null)
+            {
+                var sheetIds = spreadsheets.Files.Select(s => s.Id);
+                foreach (var sheetId in sheetIds)
+                {
+                    ListFilesResponse listFilesResponse = await this.ListImageFiles();
+                    if (listFilesResponse != null)
+                    {
+                        string[][] filesToWrite = new string[listFilesResponse.Files.Count][];
+                        int index = 0;
+                        foreach (GoogleFile file in listFilesResponse.Files)
+                        {
+                            filesToWrite[index] = new string[] { file.Name, file.ThumbnailLink.ToString(), file.WebViewLink.ToString() };
+                            index++;
+                        }
+
+                        ValueRange valueRangeToWrite = new ValueRange
+                        {
+                            Range = $"{SheetsCatalogImportConstants.SheetNames.IMAGES}!A2:C{listFilesResponse.Files.Count + 1}",
+                            Values = filesToWrite
+                        };
+
+                        var writeToSheetResult = await _googleSheetsService.WriteSpreadsheetValues(sheetId, valueRangeToWrite);
+                    }
+                }
+            }
+
+            return response;
+        }
+
         private async Task<double?> ParseDouble(string value)
         {
             if (string.IsNullOrEmpty(value))
