@@ -14,6 +14,10 @@
       "path": "/sheets-catalog-import/set-token",
       "public": true
     },
+    "shareToken": {
+      "path": "/sheets-catalog-import/share-token",
+      "public": true
+    },
     "googleAuthorize": {
       "path": "/sheets-catalog-import/auth",
       "public": true

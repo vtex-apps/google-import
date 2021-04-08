@@ -18,5 +18,7 @@ namespace SheetsCatalogImport.Services
         Task<string> ExportToSheet(string query);
         Task<SearchTotals> SearchTotal(string query);
         Task<string> ClearSheet();
+        Task<ListFilesResponse> ListImageFiles();
+        Task<string> AddImagesToSheet();
     }
 }

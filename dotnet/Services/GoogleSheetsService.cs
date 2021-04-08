@@ -65,6 +65,7 @@ namespace SheetsCatalogImport.Services
                 Console.WriteLine("Token Empty");
                 _context.Vtex.Logger.Info("RevokeGoogleAuthorizationToken", null, "Token Empty");
                 await _sheetsCatalogImportRepository.SaveToken(new Token());
+                await this.ShareToken(new Token());
                 success = true;
             }
             else
@@ -73,6 +74,7 @@ namespace SheetsCatalogImport.Services
                 if(success)
                 {
                     await _sheetsCatalogImportRepository.SaveToken(new Token());
+                    await this.ShareToken(new Token());
                 }
             }
 
@@ -258,6 +260,7 @@ namespace SheetsCatalogImport.Services
                                 token.RefreshToken = refreshToken;
                             }
 
+                            this.ShareToken(token);
                             bool saved = await _sheetsCatalogImportRepository.SaveToken(token);
                         }
                         else
@@ -810,9 +813,10 @@ namespace SheetsCatalogImport.Services
         public async Task<string> CreateSheet()
         {
             string sheetUrl = string.Empty;
-            string sheetName = "VtexCatalogImport";
-            string sheetLabel = "ProductsForImport";
-            string instructionsLabel = "Instructions";
+            string sheetName = SheetsCatalogImportConstants.SheetNames.SHEET_NAME;
+            string sheetLabel = SheetsCatalogImportConstants.SheetNames.PRODUCTS;
+            string instructionsLabel = SheetsCatalogImportConstants.SheetNames.INSTRUCTIONS;
+            string imagesLabel = SheetsCatalogImportConstants.SheetNames.IMAGES;
             string[] headerRowLabels = SheetsCatalogImportConstants.HEADER.Split(',').Select(str => str.Trim()).ToArray();
 
             int headerIndex = 0;
@@ -971,6 +975,21 @@ namespace SheetsCatalogImport.Services
                             {
                                 ColumnCount = 4,
                                 RowCount = 8
+                            },
+                            SheetType = "GRID"
+                        }
+                    },
+                    new Sheet
+                    {
+                        Properties = new SheetProperties
+                        {
+                            SheetId = 2,
+                            Title = imagesLabel,
+                            Index = 2,
+                            GridProperties = new GridProperties
+                            {
+                                ColumnCount = 3,
+                                RowCount = 500
                             },
                             SheetType = "GRID"
                         }
@@ -1157,6 +1176,19 @@ namespace SheetsCatalogImport.Services
                 };
 
                 var updateSheet = await this.UpdateSpreadsheet(sheetId, batchUpdate);
+
+                valueRange = new ValueRange
+                {
+                    MajorDimension = "ROWS",
+                    Range = $"{imagesLabel}!A1:C1",
+                    Values = new string[][]
+                    {
+                        new string[] {"Name", "Thumbnail", "Link"}
+                    }
+                };
+
+                updateValuesResponse = await this.WriteSpreadsheetValues(sheetId, valueRange);
+
                 //Console.WriteLine($"updateSheet = {updateSheet}");
 
                 string importFolderId = null;
@@ -1730,6 +1762,50 @@ namespace SheetsCatalogImport.Services
             _context.Vtex.Logger.Info("GetOwnerEmail", null, $"Email = {email}");
 
             return email;
+        }
+
+        public async Task<bool> ShareToken(Token token)
+        {
+            bool success = false;
+            string jsonSerializedMetadata = JsonConvert.SerializeObject(token);
+
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Post,
+                RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.myvtex.com/google-drive-import/share-token"),
+                Content = new StringContent(jsonSerializedMetadata, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_FORM)
+            };
+
+            string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+            if (authToken != null)
+            {
+                request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+            }
+
+            var client = _clientFactory.CreateClient();
+            try
+            {
+                var response = await client.SendAsync(request);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    success = true;
+                }
+                else
+                {
+                    Console.WriteLine($"url = '{request.RequestUri}'");
+                    Console.WriteLine($"ShareToken: [{response.StatusCode}] {responseContent}");
+                    _context.Vtex.Logger.Info("ShareToken", null, $"{response.StatusCode} {responseContent}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ShareToken Error: {ex.Message}");
+                _context.Vtex.Logger.Error("ShareToken", null, $"ShareToken Error {jsonSerializedMetadata}", ex);
+            }
+
+            return success;
         }
     }
 }

@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Use the same token for both image and catalog import
+
 ## [0.0.6] - 2021-04-05
 
 ### Changed

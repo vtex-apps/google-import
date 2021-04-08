@@ -13,6 +13,7 @@ namespace SheetsCatalogImport.Services
         Task<bool> SaveToken(Token token);
         Task<Token> GetGoogleToken();
         Task<string> GetAuthUrl();
+        Task<bool> ShareToken(Token token);
 
         Task<string> CreateSheet();
         Task<string> GetSheetLink();
