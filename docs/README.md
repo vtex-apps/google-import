@@ -12,7 +12,7 @@ This app allows VTEX Catalog data to be imported from a spreadsheet on a user's 
 
 ## Configuration
 
-1. [Install](https://vtex.io/docs/recipes/store/installing-an-app) `vtex.sheets-catalog-import` in the desired account.
+1. [Install](https://developers.vtex.com/vtex-developer-docs/docs/vtex-io-documentation-installing-an-app) `vtex.sheets-catalog-import` in the desired account.
 
 2. In your account's admin dashboard, go to `Catalog > Google Catalog Import`.
 
