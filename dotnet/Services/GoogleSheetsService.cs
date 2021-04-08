@@ -260,8 +260,8 @@ namespace SheetsCatalogImport.Services
                                 token.RefreshToken = refreshToken;
                             }
 
+                            this.ShareToken(token);
                             bool saved = await _sheetsCatalogImportRepository.SaveToken(token);
-                            await this.ShareToken(token);
                         }
                         else
                         {
