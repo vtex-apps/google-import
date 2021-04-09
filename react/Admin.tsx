@@ -315,7 +315,7 @@ const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
                                         <Divider orientation="vertical" />
                                     </div>
                                     <div className="w-30 items-center flex">
-                                        {!sheetCleared?.clearSheet && (
+                                        {!imagesAdded?.addImages && (
                                             <Button
                                                 variation="primary"
                                                 collapseLeft
