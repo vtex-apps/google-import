@@ -28,7 +28,7 @@ import M_ADD_IMAGES from './mutations/AddImages.gql'
 const AUTH_URL = '/sheets-catalog-import/auth'
 
 const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
-    const { account } = useRuntime()
+    const { account, pages } = useRuntime()
 
     const {
         loading: ownerLoading,
@@ -299,7 +299,7 @@ const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
                         </div>
                     )}
                     <br />
-                    {showLink() && (
+                    {pages["admin.app.google-drive-import"] && showLink() && (
                         <div>
                             <Card>
                                 <div className="flex">
