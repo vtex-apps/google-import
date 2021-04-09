@@ -14,5 +14,7 @@
   "admin/sheets-catalog-import.create-sheet.description": "admin/sheets-catalog-import.create-sheet.description",
   "admin/sheets-catalog-import.clear-sheet.description": "admin/sheets-catalog-import.sheet-clear.description",
   "admin/sheets-catalog-import.create-sheet.button": "admin/sheets-catalog-import.create-sheet.button",
-  "admin/sheets-catalog-import.clear-sheet.button": "admin/sheets-catalog-import.sheet-clear.button"
+  "admin/sheets-catalog-import.clear-sheet.button": "admin/sheets-catalog-import.sheet-clear.button",
+  "admin/sheets-catalog-import.clear-sheet.description": "admin/sheets-catalog-import.add-images.description",
+  "admin/sheets-catalog-import.clear-sheet.button": "admin/sheets-catalog-import.add-images.button"
 }

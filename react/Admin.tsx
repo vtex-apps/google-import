@@ -23,6 +23,7 @@ import M_REVOKE from './mutations/RevokeToken.gql'
 import M_CREATE_SHEET from './mutations/CreateSheet.gql'
 import M_PROCESS_SHEET from './mutations/ProcessSheet.gql'
 import M_CLEAR_SHEET from './mutations/ClearSheet.gql'
+import M_ADD_IMAGES from './mutations/AddImages.gql'
 
 const AUTH_URL = '/sheets-catalog-import/auth'
 
@@ -78,6 +79,11 @@ const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
         clearSheet,
         { loading: sheetClearing, data: sheetCleared },
     ] = useMutation(M_CLEAR_SHEET)
+
+    const [
+        addImages,
+        { loading: addingImages, data: imagesAdded },
+    ] = useMutation(M_ADD_IMAGES)
 
     return (
         <Layout
@@ -284,6 +290,47 @@ const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
                                         {!sheetClearing && sheetCleared?.clearSheet && (
                                             <p>
                                                 <strong>{`${sheetCleared.clearSheet}`}</strong>
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </Card>
+                            <br />
+                        </div>
+                    )}
+                    <br />
+                    {showLink() && (
+                        <div>
+                            <Card>
+                                <div className="flex">
+                                    <div className="w-70">
+                                        <p>
+                                            <FormattedMessage id="admin/sheets-catalog-import.add-images.description" />
+                                        </p>
+                                    </div>
+                                    <div
+                                        style={{ flexGrow: 1 }}
+                                        className="flex items-stretch w-20 justify-center"
+                                    >
+                                        <Divider orientation="vertical" />
+                                    </div>
+                                    <div className="w-30 items-center flex">
+                                        {!sheetCleared?.clearSheet && (
+                                            <Button
+                                                variation="primary"
+                                                collapseLeft
+                                                block
+                                                isLoading={addingImages}
+                                                onClick={() => {
+                                                    addImages()
+                                                }}
+                                            >
+                                                <FormattedMessage id="admin/sheets-catalog-import.add-images.button" />
+                                            </Button>
+                                        )}
+                                        {!addingImages && imagesAdded?.addImages && (
+                                            <p>
+                                                <strong>{`${imagesAdded.addImages}`}</strong>
                                             </p>
                                         )}
                                     </div>

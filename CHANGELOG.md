@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Added option to get image links
+
 ## [0.0.7] - 2021-04-08
 
 ### Changed

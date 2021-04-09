@@ -13,5 +13,7 @@
   "admin/sheets-catalog-import.create-sheet.description": "Create Spreadsheet",
   "admin/sheets-catalog-import.create-sheet.button": "Create Sheet",
   "admin/sheets-catalog-import.sheet-clear.description": "Clear Spreadsheet",
-  "admin/sheets-catalog-import.sheet-clear.button": "Clear Sheet"
+  "admin/sheets-catalog-import.sheet-clear.button": "Clear Sheet",
+  "admin/sheets-catalog-import.add-images.description": "Add Image Links to Images Tab",
+  "admin/sheets-catalog-import.add-images.button": "Add Images"
 }

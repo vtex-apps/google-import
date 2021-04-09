@@ -2157,7 +2157,7 @@ namespace SheetsCatalogImport.Services
                         int index = 0;
                         foreach (GoogleFile file in listFilesResponse.Files)
                         {
-                            filesToWrite[index] = new string[] { file.Name, file.ThumbnailLink.ToString(), file.WebViewLink.ToString() };
+                            filesToWrite[index] = new string[] { file.Name, $"=IMAGE(\"{ file.ThumbnailLink}\")", file.WebViewLink.ToString() };
                             index++;
                         }
 
