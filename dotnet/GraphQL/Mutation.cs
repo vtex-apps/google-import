@@ -63,6 +63,17 @@ namespace SheetsCatalogImport.GraphQL
                 {
                     return vtexAPIService.AddImagesToSheet();
                 });
+
+            Field<StringGraphType>(
+                "exportProducts",
+                arguments: new QueryArguments(
+                    new QueryArgument<StringGraphType> { Name = "exportQuery", Description = "Export Query" }
+                ),
+                resolve: context =>
+                {
+                    string query = context.GetArgument<string>("exportQuery");
+                    return vtexAPIService.ExportToSheet(query);
+                });
         }
     }
 }

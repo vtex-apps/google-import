@@ -56,6 +56,9 @@
       "name": "modify_prices"
     },
     {
+      "name": "read_prices"
+    },
+    {
       "name": "LogisticsAdmin"
     },
     {

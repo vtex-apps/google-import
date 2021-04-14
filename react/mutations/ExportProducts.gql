@@ -1,0 +1,3 @@
+mutation ExportProducts($exportQuery: String!) {
+  exportProducts(exportQuery: $exportQuery)
+}
