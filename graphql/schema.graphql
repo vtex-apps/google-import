@@ -11,4 +11,5 @@ type Mutation {
   processSheet: String
   clearSheet: String
   addImages: String
+  exportProducts(exportQuery: String!): String
 }
