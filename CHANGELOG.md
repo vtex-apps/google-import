@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Added instructions to the google spreadsheet and also information to clear up confusion for the add images button
+
+## [0.0.9] - 2021-04-14
+
+### Added
+
 - Export
 
 ## [0.0.8] - 2021-04-09

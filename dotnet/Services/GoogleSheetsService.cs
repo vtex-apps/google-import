@@ -973,8 +973,8 @@ namespace SheetsCatalogImport.Services
                             Index = 1,
                             GridProperties = new GridProperties
                             {
-                                ColumnCount = 4,
-                                RowCount = 8
+                                ColumnCount = headerRowLabels.Count(),
+                                RowCount = SheetsCatalogImportConstants.DEFAULT_SHEET_SIZE
                             },
                             SheetType = "GRID"
                         }
@@ -1026,6 +1026,30 @@ namespace SheetsCatalogImport.Services
                 };
 
                 updateValuesResponse = await this.WriteSpreadsheetValues(sheetId, valueRange);
+
+                valueRange = new ValueRange
+                {
+                    MajorDimension = "ROWS",
+                    Range = $"{instructionsLabel}!A2:{lastHeaderColumnLetter}2",
+                    Values = new string[][]
+                    {
+                        new string[] {"A few tips on using the Google Catalog Import:"},
+                        new string[] {""},
+                        new string[] {"The required fields are category, brand, product name, product reference code, sku name, and product description"},
+                        new string[] {"For categories, you can create a tree structure such as clothing/sweaters"},
+                        new string[] {"Product and SKU specs must be formatted properly. The correct formatting is key:value."},
+                        new string[] {"If there are multiple specs, you can seperate them with a line break."},
+                        new string[] {"Image links must be public to work properly."},
+                        new string[] {""},
+                        new string[] {"Sample formatting can be seen below:"},
+                        new string[] {""},
+                        headerRowLabels,
+                        new string[] { "10","500", "Example/Sample", "Example", "Example Product", "X-MP","Example Sku","8888", "SK-X-MP", "1","1","1","1","This is an example product","example,sample,demo", "This is an example product", "https://sample.demo.com/example.jpg", "","","","","TRUE","80.00","74.99","100","Material:Plastic,Wood,Glass\nBodyPart:Back,Front\nColor:Red,Yellow,Blue","Color:Blue\nMaterial:Plastic","FALSE","","" },
+                    }
+                };
+
+                updateValuesResponse = await this.WriteSpreadsheetValues(sheetId, valueRange);
+
 
                 BatchUpdate batchUpdate = new BatchUpdate
                 {
