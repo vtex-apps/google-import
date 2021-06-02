@@ -270,6 +270,12 @@ namespace SheetsCatalogImport.Services
                             doUpdateValue = dataValues[headerIndexDictionary["update"]];
                         doUpdate = await ParseBool(doUpdateValue);
 
+                        string activateSkuValue = string.Empty;
+                        bool activateSku = false;
+                        if (headerIndexDictionary.ContainsKey("activate sku") && headerIndexDictionary["activate sku"] < dataValues.Count())
+                            skuSpecs = dataValues[headerIndexDictionary["activate sku"]];
+                        activateSku = await ParseBool(activateSkuValue);
+
                         if (status.Equals("Done"))
                         {
                             // skip
@@ -370,17 +376,19 @@ namespace SheetsCatalogImport.Services
                                 success = false;
                             }
 
+                            UpdateResponse skuUpdateResponse = null;
+                            SkuRequest skuRequest = null;
                             if (success)
                             {
                                 double? packagedHeight = await ParseDouble(height);
                                 double? packagedLength = await ParseDouble(length);
                                 double? packagedWidth = await ParseDouble(width);
 
-                                SkuRequest skuRequest = new SkuRequest
+                                skuRequest = new SkuRequest
                                 {
                                     Id = await ParseLong(skuid),
                                     ProductId = productId, //await ParseLong(productid) ?? 0,
-                                    IsActive = true,
+                                    IsActive = false,
                                     Name = skuName,
                                     RefId = skuReferenceCode,
                                     PackagedHeight = await ParseDouble(height),
@@ -396,7 +404,7 @@ namespace SheetsCatalogImport.Services
                                 };
 
 
-                                UpdateResponse skuUpdateResponse = await this.CreateSku(skuRequest);
+                                skuUpdateResponse = await this.CreateSku(skuRequest);
                                 sb.AppendLine($"Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
                                 if(skuUpdateResponse.Success && string.IsNullOrEmpty(skuid))
                                 {
@@ -636,6 +644,14 @@ namespace SheetsCatalogImport.Services
                                         sb.AppendLine($"Sku Spec {i + 1}: [{skuSpecResponse.StatusCode}] {skuSpecResponse.Message}");
                                     }
                                 }
+                            }
+
+                            if(success && activateSku)
+                            {
+                                skuRequest.IsActive = true;
+                                skuUpdateResponse = await this.UpdateSku(skuid, skuRequest);
+                                success &= skuUpdateResponse.Success;
+                                sb.AppendLine($"Activate Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
                             }
 
                             string result = success ? "Done" : "Error";
