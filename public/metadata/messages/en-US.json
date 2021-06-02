@@ -3,7 +3,7 @@
   "headline": "Google Catalog Import",
   "overview": "The Google Catalog Import App allows data to be bulk imported into the VTEX Catalog from a user's Google Drive. This saves the hassle of adding data into the catalog one by one. You can also use this app in conjunction with VTEX's Google Drive App to bulk import images.",
   "features": [
-    "Process catalog data from a Google Drive Sheet.",
+    "Process catalog data from a Google Drive Sheet",
     "Sync with the VTEX Google Drive App to upload images in bulk"
   ],
   "additionalInformation": "Please head over to the official docs to see advanced setup instructions.",

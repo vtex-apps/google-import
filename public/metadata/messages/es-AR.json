@@ -1,0 +1,14 @@
+{
+  "name": "Google Catalog Import",
+  "headline": "Google Catalog Import",
+  "overview": "La aplicación Google Catalog Import permite la importación masiva de datos al Catálogo VTEX a partir del Google Drive del usuario.  Esto ahorra la molestia de añadir datos en el catálogo de forma individual. También puede utilizar esta aplicación en conjunto con la aplicación Google Drive de VTEX para importar imágenes de forma masiva.",
+  "features": [
+    "Procesar datos del catálogo desde una hoja de cálculo de Google Drive",
+    "Sincronizar con la aplicación Google Drive de VTEX para subir imágenes de forma masiva"
+  ],
+  "additionalInformation": "Por favor, consulte los documentos oficiales para ver las instrucciones de configuración avanzada.",
+  "websiteURL": "https://vtex.com/",
+  "support": {
+    "url": "https://help-tickets.vtex.com/en/support?app=vtexus.sheets-catalog-import"
+  }
+}
