@@ -48,9 +48,7 @@ namespace SheetsCatalogImport.Services
 
         public async Task<Token> RefreshGoogleAuthorizationToken(string refreshToken)
         {
-            Console.WriteLine($"    ------------------  RefreshGoogleAuthorizationToken -------------------------   ");
             Token token = await this.RefreshToken(refreshToken);
-            Console.WriteLine($"    ------------------  RefreshGoogleAuthorizationToken {JsonConvert.SerializeObject(token)}   ");
             return token;
         }
 
@@ -62,7 +60,6 @@ namespace SheetsCatalogImport.Services
 
             if (token != null && string.IsNullOrEmpty(token.AccessToken))
             {
-                Console.WriteLine("Token Empty");
                 _context.Vtex.Logger.Info("RevokeGoogleAuthorizationToken", null, "Token Empty");
                 await _sheetsCatalogImportRepository.SaveToken(new Token());
                 await this.ShareToken(new Token());
@@ -109,21 +106,15 @@ namespace SheetsCatalogImport.Services
                 {
                     authUrl = responseContent;
                     string siteUrl = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.FORWARDED_HOST];
-                    Console.WriteLine($"authUrl (before) = {authUrl}");
-                    Console.WriteLine($"siteUrl = {siteUrl}");
                     authUrl = authUrl.Replace("state=", $"state={siteUrl}");
-                    //authUrl = $"{authUrl}&state={siteUrl}";
-                    Console.WriteLine($"authUrl (after) = {authUrl}");
                 }
                 else
                 {
-                    Console.WriteLine($"Failed to get auth url [{response.StatusCode}]");
                     _context.Vtex.Logger.Warn("GetAuthUrl", null, $"Failed to get auth url [{response.StatusCode}]");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting auth url [{ex.Message}]");
                 _context.Vtex.Logger.Error("GetAuthUrl", null, $"Error getting auth url", ex);
             }
 
@@ -136,7 +127,6 @@ namespace SheetsCatalogImport.Services
 
             if (token != null && string.IsNullOrEmpty(token.AccessToken))
             {
-                Console.WriteLine("Token Empty");
                 _context.Vtex.Logger.Info("RevokeGoogleAuthorizationToken", null, "Token Empty");
                 success = true;
             }
@@ -162,7 +152,6 @@ namespace SheetsCatalogImport.Services
                 {
                     var response = await client.SendAsync(request);
                     string responseContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"RevokeGoogleAuthorizationToken = {responseContent}");
                     if (response.IsSuccessStatusCode)
                     {
                         success = true;
@@ -183,7 +172,6 @@ namespace SheetsCatalogImport.Services
 
         private async Task<Token> RefreshToken(string refreshToken)
         {
-            //Console.WriteLine($"RefreshToken");
             Token token = null;
 
             if (!string.IsNullOrEmpty(refreshToken))
@@ -207,29 +195,19 @@ namespace SheetsCatalogImport.Services
                 {
                     var response = await client.SendAsync(request);
                     string responseContent = await response.Content.ReadAsStringAsync();
-                    //Console.WriteLine($" RefreshToken = {response.IsSuccessStatusCode}");
                     if (response.IsSuccessStatusCode)
                     {
                         token = JsonConvert.DeserializeObject<Token>(responseContent);
-                        Console.WriteLine($"RefreshToken = {responseContent}");
-                        //Console.WriteLine($"RefreshToken = {JsonConvert.SerializeObject(token)}");
                     }
                     else
                     {
-                        Console.WriteLine($"url = '{request.RequestUri}'");
-                        Console.WriteLine($"RefreshToken: [{response.StatusCode}] {responseContent}");
                         _context.Vtex.Logger.Info("RefreshToken", null, $"{response.StatusCode} {responseContent}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"RefreshToken Error: {ex.Message}");
                     _context.Vtex.Logger.Error("RefreshToken", null, $"Refresh Token {refreshToken}", ex);
                 }
-            }
-            else
-            {
-                Console.WriteLine($"RefreshToken is Null!");
             }
 
             return token;
@@ -250,7 +228,6 @@ namespace SheetsCatalogImport.Services
                 {
                     if (token.ExpiresAt <= DateTime.Now)
                     {
-                        Console.WriteLine($"ExpiresAt = {token.ExpiresAt} Refreshing token. [{string.IsNullOrEmpty(refreshToken)}]");
                         token = await this.RefreshGoogleAuthorizationToken(refreshToken);
                         if (token != null)
                         {
@@ -265,14 +242,12 @@ namespace SheetsCatalogImport.Services
                         }
                         else
                         {
-                            Console.WriteLine("Failed to refresh token!");
                             _context.Vtex.Logger.Warn("GetGoogleToken", null, $"Could not refresh token.");
                         }
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"Did not load token. Have Access token?{!string.IsNullOrEmpty(token.AccessToken)} Have Refresh token?{!string.IsNullOrEmpty(token.RefreshToken)}");
                     _context.Vtex.Logger.Warn("GetGoogleToken", null, $"Could not load token. Have Access token?{!string.IsNullOrEmpty(token.AccessToken)} Have Refresh token?{!string.IsNullOrEmpty(token.RefreshToken)}");
                     token = null;
                 }
@@ -316,7 +291,6 @@ namespace SheetsCatalogImport.Services
                 {
                     var response = await client.SendAsync(request);
                     responseContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"ListSheetsInFolder: [{response.StatusCode}] '{responseContent}' ");
                     if (response.IsSuccessStatusCode)
                     {
                         listFilesResponse = JsonConvert.DeserializeObject<ListFilesResponse>(responseContent);
@@ -330,13 +304,11 @@ namespace SheetsCatalogImport.Services
                 catch (Exception ex)
                 {
                     _context.Vtex.Logger.Error("ListSheetsInFolder", folderId, $"Error", ex);
-                    Console.WriteLine($"ListSheetsInFolder: {folderId} Error: {ex.Message} ");
                 }
             }
             else
             {
                 _context.Vtex.Logger.Warn("ListSheetsInFolder", folderId, "Token error.");
-                Console.WriteLine($"ListSheetsInFolder: {folderId} Token error. ");
             }
 
             return listFilesResponse;
@@ -384,7 +356,6 @@ namespace SheetsCatalogImport.Services
                         foreach (GoogleFile folder in listFilesResponse.Files)
                         {
                             folders.Add(folder.Id, folder.Name);
-                            //Console.WriteLine($"ListFolders [{folder.Id}] = [{folder.Name}]");
                         }
                     }
                     else
@@ -501,7 +472,6 @@ namespace SheetsCatalogImport.Services
                     {
                         CreateFolderResponse createFolderResponse = JsonConvert.DeserializeObject<CreateFolderResponse>(responseContent);
                         folderId = createFolderResponse.Id;
-                        Console.WriteLine($"CreateFolder {folderName} Id:{folderId} ParentId?{parentId}");
                     }
                 }
                 catch(Exception ex)
@@ -617,7 +587,6 @@ namespace SheetsCatalogImport.Services
                         }
 
                         success = response.IsSuccessStatusCode;
-                        Console.WriteLine($"    -   GetSheet responseStatus = '{response.StatusCode}'");
                     }
                     catch (Exception ex)
                     {
@@ -634,7 +603,6 @@ namespace SheetsCatalogImport.Services
                 _context.Vtex.Logger.Warn("GetSheet", null, "Parameter missing.");
             }
 
-            //Console.WriteLine($"    -   GetSheet responseContent = '{responseContent}'");
             return responseContent;
         }
 
@@ -785,7 +753,6 @@ namespace SheetsCatalogImport.Services
                     {
                         var response = await client.SendAsync(request);
                         responseContent = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine($"[|]     SaveFile {responseContent}");
 
                         if(response.IsSuccessStatusCode)
                         {
@@ -824,7 +791,6 @@ namespace SheetsCatalogImport.Services
             Dictionary<string, int> headerIndexDictionary = new Dictionary<string, int>();
             foreach (string header in headerRowLabels)
             {
-                //Console.WriteLine($"({headerIndex}) sheetHeader = {header}");
                 headerIndexDictionary.Add(header.ToLower(), headerIndex);
                 headerIndex++;
             }
@@ -1254,8 +1220,6 @@ namespace SheetsCatalogImport.Services
 
                 updateValuesResponse = await this.WriteSpreadsheetValues(sheetId, valueRange);
 
-                //Console.WriteLine($"updateSheet = {updateSheet}");
-
                 string importFolderId = null;
                 string accountFolderId = null;
                 string productsFolderId = null;
@@ -1276,11 +1240,9 @@ namespace SheetsCatalogImport.Services
                         importFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(SheetsCatalogImportConstants.FolderNames.IMPORT)).Select(f => f.Id).FirstOrDefault();
                         if (!string.IsNullOrEmpty(importFolderId))
                         {
-                            //Console.WriteLine($"importFolderId:{importFolderId}");
                             accountFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(accountName) && f.Parents.Contains(importFolderId)).Select(f => f.Id).FirstOrDefault();
                             if (!string.IsNullOrEmpty(accountFolderId))
                             {
-                                //Console.WriteLine($"accountFolderId:{accountFolderId}");
                                 productsFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(SheetsCatalogImportConstants.FolderNames.PRODUCTS) && f.Parents.Contains(accountFolderId)).Select(f => f.Id).FirstOrDefault();
                             }
                         }
@@ -1364,10 +1326,7 @@ namespace SheetsCatalogImport.Services
                 }
 
                 bool moved = await this.MoveFile(sheetId, productsFolderId);
-                Console.WriteLine($"Moved? {moved}");
-
                 bool setPermission = await SetPermission(sheetId);
-                Console.WriteLine($"Set Permission? {setPermission}");
             }
 
             string result = string.IsNullOrEmpty(sheetId) ? "Error" : "Created";
@@ -1408,7 +1367,6 @@ namespace SheetsCatalogImport.Services
                     {
                         var response = await client.SendAsync(request);
                         responseContent = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine($"CreateSpreadsheet [{response.StatusCode}] {responseContent}");
                         success = response.IsSuccessStatusCode;
                         if (success)
                         {
@@ -1465,7 +1423,6 @@ namespace SheetsCatalogImport.Services
                     {
                         var response = await client.SendAsync(request);
                         responseContent = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine($"WriteSpreadsheetValues [{response.StatusCode}] {responseContent}");
                         if (response.IsSuccessStatusCode)
                         {
                             updateValuesResponse = JsonConvert.DeserializeObject<UpdateValuesResponse>(responseContent);
@@ -1543,7 +1500,6 @@ namespace SheetsCatalogImport.Services
                     {
                         var response = await client.SendAsync(request);
                         responseContent = await response.Content.ReadAsStringAsync();
-                        //Console.WriteLine($"UpdateSpreadsheet [{response.StatusCode}] {responseContent}");
                         if (!response.IsSuccessStatusCode)
                         {
                             if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
@@ -1616,7 +1572,6 @@ namespace SheetsCatalogImport.Services
                     {
                         var response = await client.SendAsync(request);
                         responseContent = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine($"ClearSpreadsheet [{response.StatusCode}] {responseContent}");
                         if (!response.IsSuccessStatusCode)
                         {
                             if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
@@ -1681,11 +1636,9 @@ namespace SheetsCatalogImport.Services
                     importFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(SheetsCatalogImportConstants.FolderNames.IMPORT)).Select(f => f.Id).FirstOrDefault();
                     if (!string.IsNullOrEmpty(importFolderId))
                     {
-                        //Console.WriteLine($"importFolderId:{importFolderId}");
                         accountFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(accountName) && f.Parents.Contains(importFolderId)).Select(f => f.Id).FirstOrDefault();
                         if (!string.IsNullOrEmpty(accountFolderId))
                         {
-                            //Console.WriteLine($"accountFolderId:{accountFolderId}");
                             productsFolderId = getFoldersResponse.Files.Where(f => f.Name.Equals(SheetsCatalogImportConstants.FolderNames.PRODUCTS) && f.Parents.Contains(accountFolderId)).Select(f => f.Id).FirstOrDefault();
                         }
                     }
@@ -1798,7 +1751,6 @@ namespace SheetsCatalogImport.Services
                     if (folderIds != null)
                     {
                         productFolderId = folderIds.ProductsFolderId;
-                        Console.WriteLine($"GetOwnerEmail - ProductsFolderId = {productFolderId}");
                         _context.Vtex.Logger.Info("GetOwnerEmail", null, $"Products Folder Id: {productFolderId}");
                     }
 
@@ -1815,12 +1767,10 @@ namespace SheetsCatalogImport.Services
                 else
                 {
                     _context.Vtex.Logger.Info("GetOwnerEmail", null, "Could not load Token.");
-                    Console.WriteLine("GetOwnerEmail - Could not load Token.");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"{ex.Message}");
                 _context.Vtex.Logger.Error("GetOwnerEmail", null, $"Error getting Drive owner", ex);
             }
 
@@ -1859,14 +1809,11 @@ namespace SheetsCatalogImport.Services
                 }
                 else
                 {
-                    Console.WriteLine($"url = '{request.RequestUri}'");
-                    Console.WriteLine($"ShareToken: [{response.StatusCode}] {responseContent}");
                     _context.Vtex.Logger.Info("ShareToken", null, $"{response.StatusCode} {responseContent}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ShareToken Error: {ex.Message}");
                 _context.Vtex.Logger.Error("ShareToken", null, $"ShareToken Error {jsonSerializedMetadata}", ex);
             }
 

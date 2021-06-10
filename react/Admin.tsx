@@ -186,7 +186,7 @@ const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
 
                                         <div className="w-30 items-center flex">
                                             <Button
-                                                variation="primary"
+                                                variation="secondary"
                                                 collapseLeft
                                                 block
                                                 isLoading={createLoading}
@@ -237,7 +237,7 @@ const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
                                             <div className="w-30 items-center flex">
                                                 {!sheetProcessed?.processSheet && (
                                                     <Button
-                                                        variation="primary"
+                                                        variation="secondary"
                                                         collapseLeft
                                                         block
                                                         isLoading={sheetProcessing}
@@ -278,7 +278,7 @@ const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
                                     <div className="w-30 items-center flex">
                                         {!sheetCleared?.clearSheet && (
                                             <Button
-                                                variation="primary"
+                                                variation="secondary"
                                                 collapseLeft
                                                 block
                                                 isLoading={sheetClearing}
@@ -332,7 +332,7 @@ const Admin: FC<WrappedComponentProps & any> = ({ intl, link, token }) => {
                                     <div className="w-30 items-center flex">
                                         {!imagesAdded?.addImages && (
                                             <Button
-                                                variation="primary"
+                                                variation="secondary"
                                                 collapseLeft
                                                 block
                                                 isLoading={addingImages}
