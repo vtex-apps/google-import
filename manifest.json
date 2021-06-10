@@ -4,14 +4,9 @@
   "version": "0.1.1",
   "title": "Google Catalog Import",
   "description": "Update Catalog from Google Sheet",
-  "categories": [],
-  "settingsSchema": {},
   "dependencies": {
     "vtex.styleguide": "9.x"
   },
-  "registries": [
-    "smartcheckout"
-  ],
   "builders": {
     "dotnet": "2.x",
     "graphql": "1.x",

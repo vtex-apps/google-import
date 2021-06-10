@@ -41,7 +41,6 @@
 
         public async Task<Token> LoadToken()
         {
-            //Console.WriteLine("-> LoadToken <-");
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -67,7 +66,6 @@
             }
 
             string responseContent = await response.Content.ReadAsStringAsync();
-            //Console.WriteLine($"-> LoadToken [{response.StatusCode}] {responseContent} <-");
             _context.Vtex.Logger.Info("LoadToken", null, responseContent);
             Token token = JsonConvert.DeserializeObject<Token>(responseContent);
 
@@ -77,7 +75,6 @@
         public async Task<bool> SaveToken(Token token)
         {
             var jsonSerializedToken = JsonConvert.SerializeObject(token);
-            Console.WriteLine($"-> SaveToken <- {jsonSerializedToken}");
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
@@ -95,14 +92,12 @@
             var client = _clientFactory.CreateClient();
             var response = await client.SendAsync(request);
             string responseContent = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"-> SaveToken [{response.StatusCode}] '{responseContent}' {jsonSerializedToken} <-");
             _context.Vtex.Logger.Info("SaveToken", null, $"[{response.StatusCode}] '{responseContent}' {jsonSerializedToken}");
             return response.IsSuccessStatusCode;
         }
 
         public async Task<FolderIds> LoadFolderIds(string accountName)
         {
-            //Console.WriteLine("-> LoadToken <-");
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -121,7 +116,6 @@
             var client = _clientFactory.CreateClient();
             var response = await client.SendAsync(request);
             string responseContent = await response.Content.ReadAsStringAsync();
-            //Console.WriteLine($"-> LoadToken [{response.StatusCode}] {responseContent} <-");
             _context.Vtex.Logger.Info("LoadFolderIds", null, $"Account '{accountName}' [{response.StatusCode}] {responseContent}");
 
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -248,8 +242,6 @@
 
             var client = _clientFactory.CreateClient();
             var response = await client.SendAsync(request);
-
-            Console.WriteLine($" -   ClearImportLock -   [{response.StatusCode}]");
         }
     }
 }

@@ -112,7 +112,6 @@
             bool haveToken = false;
             Token token = await _googleSheetsService.GetGoogleToken();
             haveToken = token != null && !string.IsNullOrEmpty(token.RefreshToken);
-            Console.WriteLine($"Have Token? {haveToken}");
             Response.Headers.Add("Cache-Control", "no-cache");
             return haveToken;
         }

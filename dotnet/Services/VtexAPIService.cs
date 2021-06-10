@@ -55,7 +55,6 @@ namespace SheetsCatalogImport.Services
             TimeSpan elapsedTime = DateTime.Now - importStarted;
             if (elapsedTime.TotalHours < SheetsCatalogImportConstants.LOCK_TIMEOUT)
             {
-                Console.WriteLine("Blocked by lock");
                 _context.Vtex.Logger.Info("ProcessSheet", null, $"Blocked by lock.  Import started: {importStarted}");
                 return ($"Import started {importStarted} in progress.");
             }
@@ -77,14 +76,8 @@ namespace SheetsCatalogImport.Services
             if (folderIds != null)
             {
                 importFolderId = folderIds.ProductsFolderId;
-                //accountFolderId = folderIds.AccountFolderId;
-            }
-            else
-            {
-                Console.WriteLine("LoadFolderIds returned Null!");
             }
 
-            Console.WriteLine($"ListSheetsInFolder {importFolderId}");
             ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(importFolderId);
             if (spreadsheets != null)
             {
@@ -110,12 +103,10 @@ namespace SheetsCatalogImport.Services
                     int rowCount = googleSheet.ValueRanges[0].Values.Count();
                     int writeBlockSize = Math.Max(rowCount / SheetsCatalogImportConstants.WRITE_BLOCK_SIZE_DIVISOR, SheetsCatalogImportConstants.MIN_WRITE_BLOCK_SIZE);
                     string[][] arrValuesToWrite = new string[writeBlockSize][];
-                    Console.WriteLine($"Write block size = {writeBlockSize}");
                     int offset = 0;
                     _context.Vtex.Logger.Debug("ProcessSheet", null, $"'{sheetName}' Row count: {rowCount} ");
                     foreach (string header in sheetHeader)
                     {
-                        //Console.WriteLine($"({headerIndex}) sheetHeader = {header}");
                         headerIndexDictionary.Add(header.ToLower(), headerIndex);
                         headerIndex++;
                     }
@@ -123,47 +114,6 @@ namespace SheetsCatalogImport.Services
                     statusColumnIndex = headerIndexDictionary["status"];
                     string statusColumnLetter = await GetColumnLetter(headerIndexDictionary["status"]);
                     string messageColumnLetter = await GetColumnLetter(headerIndexDictionary["message"]);
-                    //if (!headerIndexDictionary.ContainsKey("date"))
-                    //{
-                    //    BatchUpdate batchUpdate = new BatchUpdate
-                    //    {
-                    //        Requests = new Request[]
-                    //        {
-                    //            new Request
-                    //            {
-                    //                InsertDimension = new InsertDimension
-                    //                {
-                    //                    InheritFromBefore = false,
-                    //                    Range = new InsertRange
-                    //                    {
-                    //                        SheetId = 0,
-                    //                        Dimension = "COLUMNS",
-                    //                        StartIndex = headerIndexDictionary["status"] + 1,
-                    //                        EndIndex = headerIndexDictionary["message"] + 1
-                    //                    }
-                    //                }
-                    //            }
-                    //        }
-                    //    };
-
-                    //    var updateSheet = await _googleSheetsService.UpdateSpreadsheet(sheetId, batchUpdate);
-                    //    sheetContent = await _googleSheetsService.GetSheet(sheetId, string.Empty);
-                    //    valueRange = googleSheet.ValueRanges[0].Range;
-                    //    sheetName = valueRange.Split("!")[0];
-                    //    sheetHeader = googleSheet.ValueRanges[0].Values[0];
-                    //    foreach (string header in sheetHeader)
-                    //    {
-                    //        //Console.WriteLine($"({headerIndex}) sheetHeader = {header}");
-                    //        headerIndexDictionary.Add(header.ToLower(), headerIndex);
-                    //        headerIndex++;
-                    //    }
-
-                    //    statusColumnLetter = await GetColumnLetter(headerIndexDictionary["status"]);
-                    //    messageColumnLetter = await GetColumnLetter(headerIndexDictionary["message"]);
-                    //}
-
-                    //string dateColumnLetter = await GetColumnLetter(headerIndexDictionary["date"]);
-                    Console.WriteLine($"Status column = '{statusColumnLetter}' Message = '{messageColumnLetter}'");
 
                     for (int index = 1; index < rowCount; index++)
                     {
@@ -273,7 +223,7 @@ namespace SheetsCatalogImport.Services
                         string activateSkuValue = string.Empty;
                         bool activateSku = false;
                         if (headerIndexDictionary.ContainsKey("activate sku") && headerIndexDictionary["activate sku"] < dataValues.Count())
-                            skuSpecs = dataValues[headerIndexDictionary["activate sku"]];
+                            activateSkuValue = dataValues[headerIndexDictionary["activate sku"]];
                         activateSku = await ParseBool(activateSkuValue);
 
                         if (status.Equals("Done"))
@@ -307,7 +257,6 @@ namespace SheetsCatalogImport.Services
                             };
 
                             UpdateResponse productUpdateResponse = await this.CreateProduct(productRequest);
-
                             sb.AppendLine($"Product: [{productUpdateResponse.StatusCode}] {productUpdateResponse.Message}");
                             long productId = 0;
                             if (productUpdateResponse.Success)
@@ -339,13 +288,11 @@ namespace SheetsCatalogImport.Services
                                 }
                                 else if (productUpdateResponse.Message.Contains("There is already a product"))
                                 {
-                                    Console.WriteLine(" --- There is already a product --- ");
                                     if (string.IsNullOrEmpty(productid))
                                     {
                                         string[] splitResponse = productUpdateResponse.Message.Split(" ");
                                         string parsedProductId = splitResponse[splitResponse.Length - 1];
                                         parsedProductId = parsedProductId.Remove(parsedProductId.Length - 1, 1);
-                                        Console.WriteLine($" ---  parsed product id {parsedProductId} --- ");
                                         productId = await ParseLong(parsedProductId) ?? 0;
                                         if (productId > 0)
                                         {
@@ -360,7 +307,6 @@ namespace SheetsCatalogImport.Services
                                     }
                                     else
                                     {
-                                        Console.WriteLine(" --- productid not empty --- ");
                                         success = false;
                                     }
                                 }
@@ -375,7 +321,7 @@ namespace SheetsCatalogImport.Services
                                 // What to do in this case?
                                 success = false;
                             }
-
+                            
                             UpdateResponse skuUpdateResponse = null;
                             SkuRequest skuRequest = null;
                             if (success)
@@ -449,7 +395,7 @@ namespace SheetsCatalogImport.Services
                                     success &= skuUpdateResponse.Success;
                                 }
                             }
-
+                            
                             if (success)
                             {
                                 if (!string.IsNullOrEmpty(skuEanGtin))
@@ -463,7 +409,7 @@ namespace SheetsCatalogImport.Services
                                     sb.AppendLine($"EAN/GTIN: Empty");
                                 }
                             }
-
+                            
                             if (success)
                             {
                                 UpdateResponse updateResponse = null;
@@ -520,7 +466,7 @@ namespace SheetsCatalogImport.Services
                                     sb.AppendLine($"Images: Empty");
                                 }
                             }
-
+                            
                             if (success)
                             {
                                 if (!string.IsNullOrEmpty(msrp) && !string.IsNullOrEmpty(sellingPrice))
@@ -542,7 +488,7 @@ namespace SheetsCatalogImport.Services
                                     success = false;
                                 }
                             }
-
+                            
                             if (success)
                             {
                                 if (!string.IsNullOrEmpty(availableQuantity))
@@ -578,74 +524,89 @@ namespace SheetsCatalogImport.Services
                                     }
                                 }
                             }
-
+                            
                             if (success)
                             {
                                 if (!string.IsNullOrEmpty(productSpecs))
                                 {
-                                    string[] allSpecs = productSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-                                    for (int i = 0; i < allSpecs.Length; i++)
+                                    try
                                     {
-                                        Console.WriteLine($"Processing Spec ({i}) '{allSpecs[i]}'");
-                                        string[] specsArr = allSpecs[i].Split(':');
-                                        string specName = specsArr[0];
-                                        string[] specValueArr = specsArr[1].Split(',');
-
-                                        SpecAttr prodSpec = new SpecAttr
+                                        string[] allSpecs = productSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                        for (int i = 0; i < allSpecs.Length; i++)
                                         {
-                                            GroupName = "Default",
-                                            RootLevelSpecification = true,
-                                            FieldName = specName,
-                                            FieldValues = specValueArr
-                                        };
+                                            string[] specsArr = allSpecs[i].Split(':');
+                                            string specName = specsArr[0];
+                                            string[] specValueArr = specsArr[1].Split(',');
 
-                                        UpdateResponse prodSpecResponse = await this.SetProdSpecs(productId.ToString(), prodSpec);
-                                        if (!prodSpecResponse.Success && prodSpecResponse.StatusCode.Equals("TooManyRequests"))
-                                        {
-                                            _context.Vtex.Logger.Warn("ProcessSheet", null, $"Prod Spec {i + 1}: [{prodSpecResponse.StatusCode}] - Retrying...");
-                                            //Console.WriteLine($"!!!!!!!!!!! ------  Prod Spec {i + 1}: [{prodSpecResponse.StatusCode}] - Retrying... !!!!!!!!!!!!!!!");
-                                            await Task.Delay(1000 * 10);
-                                            prodSpecResponse = await this.SetProdSpecs(productId.ToString(), prodSpec);
+                                            SpecAttr prodSpec = new SpecAttr
+                                            {
+                                                GroupName = "Default",
+                                                RootLevelSpecification = true,
+                                                FieldName = specName,
+                                                FieldValues = specValueArr
+                                            };
+
+                                            UpdateResponse prodSpecResponse = await this.SetProdSpecs(productId.ToString(), prodSpec);
+                                            if (!prodSpecResponse.Success && prodSpecResponse.StatusCode.Equals("TooManyRequests"))
+                                            {
+                                                _context.Vtex.Logger.Warn("ProcessSheet", null, $"Prod Spec {i + 1}: [{prodSpecResponse.StatusCode}] - Retrying...");
+                                                await Task.Delay(1000 * 10);
+                                                prodSpecResponse = await this.SetProdSpecs(productId.ToString(), prodSpec);
+                                            }
+
+                                            success &= prodSpecResponse.Success;
+                                            sb.AppendLine($"Prod Spec {i + 1}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
                                         }
-
-                                        success &= prodSpecResponse.Success;
-                                        sb.AppendLine($"Prod Spec {i + 1}: [{prodSpecResponse.StatusCode}] {prodSpecResponse.Message}");
+                                    }
+                                    catch(Exception ex)
+                                    {
+                                        success = false;
+                                        sb.AppendLine($"Error processing Product Specifications.");
+                                        _context.Vtex.Logger.Error("ProcessSheet", null, "Error processing Prod Spec", ex);
                                     }
                                 }
-
+                                
                                 if (!string.IsNullOrEmpty(skuSpecs))
                                 {
-                                    string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-                                    for (int i = 0; i < allSpecs.Length; i++)
+                                    try
                                     {
-                                        Console.WriteLine($"Processing Sku Spec ({i}) '{allSpecs[i]}'");
-                                        string[] specsArr = allSpecs[i].Split(':');
-                                        string specName = specsArr[0];
-                                        string specValue = specsArr[1];
-
-                                        SpecAttr skuSpec = new SpecAttr
+                                        string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                        for (int i = 0; i < allSpecs.Length; i++)
                                         {
-                                            GroupName = "Default",
-                                            RootLevelSpecification = true,
-                                            FieldName = specName,
-                                            FieldValue = specValue
-                                        };
+                                            string[] specsArr = allSpecs[i].Split(':');
+                                            string specName = specsArr[0];
+                                            string specValue = specsArr[1];
 
-                                        UpdateResponse skuSpecResponse = await this.SetSkuSpec(skuid, skuSpec);
-                                        if(!skuSpecResponse.Success && skuSpecResponse.StatusCode.Equals("TooManyRequests"))
-                                        {
-                                            _context.Vtex.Logger.Warn("ProcessSheet", null, $"Sku Spec {i + 1}: [{skuSpecResponse.StatusCode}] - Retrying...");
-                                            Console.WriteLine($"!!!!!!!!!!! ------  Sku Spec {i + 1}: [{skuSpecResponse.StatusCode}] - Retrying... !!!!!!!!!!!!!!!");
-                                            await Task.Delay(5000);
-                                            skuSpecResponse = await this.SetSkuSpec(skuid, skuSpec);
+                                            SpecAttr skuSpec = new SpecAttr
+                                            {
+                                                GroupName = "Default",
+                                                RootLevelSpecification = true,
+                                                FieldName = specName,
+                                                FieldValue = specValue
+                                            };
+
+                                            UpdateResponse skuSpecResponse = await this.SetSkuSpec(skuid, skuSpec);
+                                            
+                                            if(!skuSpecResponse.Success && skuSpecResponse.StatusCode.Equals("TooManyRequests"))
+                                            {
+                                                _context.Vtex.Logger.Warn("ProcessSheet", null, $"Sku Spec {i + 1}: [{skuSpecResponse.StatusCode}] - Retrying...");
+                                                await Task.Delay(5000);
+                                                skuSpecResponse = await this.SetSkuSpec(skuid, skuSpec);
+                                            }
+
+                                            success &= skuSpecResponse.Success;
+                                            sb.AppendLine($"Sku Spec {i + 1}: [{skuSpecResponse.StatusCode}] {skuSpecResponse.Message}");
                                         }
-
-                                        success &= skuSpecResponse.Success;
-                                        sb.AppendLine($"Sku Spec {i + 1}: [{skuSpecResponse.StatusCode}] {skuSpecResponse.Message}");
+                                    }
+                                    catch(Exception ex)
+                                    {
+                                        success = false;
+                                        sb.AppendLine($"Error processing Sku Specifications.");
+                                        _context.Vtex.Logger.Error("ProcessSheet", null, "Error processing Sku Spec", ex);
                                     }
                                 }
                             }
-
+                            
                             if(success && activateSku)
                             {
                                 skuRequest.IsActive = true;
@@ -653,7 +614,7 @@ namespace SheetsCatalogImport.Services
                                 success &= skuUpdateResponse.Success;
                                 sb.AppendLine($"Activate Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
                             }
-
+                            
                             string result = success ? "Done" : "Error";
                             string[] arrLineValuesToWrite = new string[] { result, sb.ToString() };
                             arrValuesToWrite[index - offset - 1] = arrLineValuesToWrite;
@@ -667,7 +628,7 @@ namespace SheetsCatalogImport.Services
                                 _context.Vtex.Logger.Debug("ProcessSheet", null, $"Line {index}\r{string.Join('\n', dataValues)}");
                                 _context.Vtex.Logger.Warn("ProcessSheet", null, $"Line {index}\n{sb}");
                             }
-
+                            
                             sb.Clear();
                         }
 
@@ -707,7 +668,6 @@ namespace SheetsCatalogImport.Services
                     };
 
                     string resize = await _googleSheetsService.UpdateSpreadsheet(sheetId, batchUpdate);
-                    Console.WriteLine($"RESIZE = {resize}");
                 }
             }
 
@@ -799,12 +759,7 @@ namespace SheetsCatalogImport.Services
             {
                 importFolderId = folderIds.ProductsFolderId;
             }
-            else
-            {
-                Console.WriteLine("LoadFolderIds returned Null!");
-            }
 
-            Console.WriteLine($"ListSheetsInFolder {importFolderId}");
             ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(importFolderId);
             if (spreadsheets != null)
             {
@@ -827,7 +782,6 @@ namespace SheetsCatalogImport.Services
                     int headerIndex = 0;
                     foreach (string header in sheetHeader)
                     {
-                        //Console.WriteLine($"({headerIndex}) sheetHeader = {header}");
                         headerIndexDictionary.Add(header.ToLower(), headerIndex);
                         headerIndex++;
                     }
@@ -850,7 +804,6 @@ namespace SheetsCatalogImport.Services
                                 {
                                     foreach (KeyValuePair<string, long[]> productSku in productAndSkuIdsResponse.Data)
                                     {
-                                        Console.WriteLine($"productid: {productSku.Key}");
                                         productIdsToExport.Add(productSku.Key);
                                     }
                                 }
@@ -881,7 +834,6 @@ namespace SheetsCatalogImport.Services
                             string[] productIds = queryParam.Split(',');
                             foreach (string id in productIds)
                             {
-                                Console.WriteLine($"productid: {id}");
                                 productIdsToExport.Add(id);
                             }
                         }
@@ -918,7 +870,6 @@ namespace SheetsCatalogImport.Services
                                     catch (Exception ex)
                                     {
                                         _context.Vtex.Logger.Error("ExportToSheet", "GetSkuAndContext", $"Error getting Sku and Context for skuId {productSkusResponse.Id}", ex);
-                                        Console.WriteLine($"Error getting Sku and Context for skuId {productSkusResponse.Id}");
                                     }
 
                                     //string brandName = brandList.Where(b => b.Id.Equals(getProductByIdResponse.BrandId)).Select(b => b.Name).FirstOrDefault();
@@ -954,7 +905,6 @@ namespace SheetsCatalogImport.Services
                                     }
 
                                     //arrayToWrite[index] = new string[] { productId, skuId.ToString(), categoryIds[categoryId], brandName, getProductByIdResponse.Name, getProductByIdResponse.RefId, skuAndContextResponse.NameComplete, "EAN", "SKU REF", skuAndContextResponse.Dimension.Height.ToString(), skuAndContextResponse.Dimension.Width.ToString(), skuAndContextResponse.Dimension.Length.ToString(), skuAndContextResponse.Dimension.Weight.ToString(), getProductByIdResponse.Description, "SEARCH KEYWORDS", getProductByIdResponse.MetaTagDescription, skuAndContextResponse.ImageUrl, "", "", "", "", "", "0.00", "0.00", "0", "Material", "Color", "", "" };
-                                    Console.WriteLine($"INDEX = {index}");
                                     arrayToWrite[index] = new string[headerIndexDictionary.Count];
                                     arrayToWrite[index][headerIndexDictionary["productid"]] = productId;
                                     arrayToWrite[index][headerIndexDictionary["skuid"]] = productSkusResponse.Id;
@@ -1025,7 +975,6 @@ namespace SheetsCatalogImport.Services
             {
                 string[] nameArr = categoryName.Split('/');
                 string currentLevelCategoryName = nameArr[0];
-                Console.WriteLine($"Category Name = {currentLevelCategoryName}");
                 GetCategoryTreeResponse currentLevelCategoryTree = categoryTree.Where(t => t.Name.Equals(currentLevelCategoryName)).FirstOrDefault();
                 if (currentLevelCategoryTree != null)
                 {
@@ -1039,17 +988,7 @@ namespace SheetsCatalogImport.Services
                         categoryId = await GetCategoryIdByName(currentLevelCategoryTree.Children, categoryName);
                     }
                 }
-                else
-                {
-                    Console.WriteLine("Current Level Category Tree is Null");
-                }
             }
-            else
-            {
-                Console.WriteLine("Empty Category Name");
-            }
-
-            Console.WriteLine($"categoryId = _ {categoryId} _ ");
 
             return categoryId;
         }
@@ -1648,8 +1587,6 @@ namespace SheetsCatalogImport.Services
                 success = response.IsSuccessStatusCode;
                 statusCode = response.StatusCode.ToString();
                 responseContent = await response.Content.ReadAsStringAsync();
-
-                Console.WriteLine($"CreatePrice '{request.RequestUri}' [{statusCode}] {responseContent} {jsonSerializedData}");
             }
             catch (Exception ex)
             {
@@ -1692,7 +1629,6 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                //Console.WriteLine($"GetWarehouses [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     getWarehousesResponse = JsonConvert.DeserializeObject<GetWarehousesResponse[]>(responseContent);
@@ -1731,7 +1667,6 @@ namespace SheetsCatalogImport.Services
             var client = _clientFactory.CreateClient();
             var response = await client.SendAsync(request);
             string responseContent = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"ListAllWarehouses [{response.StatusCode}] {responseContent}");
             if (response.IsSuccessStatusCode)
             {
                 listAllWarehousesResponse = JsonConvert.DeserializeObject<GetWarehousesResponse[]>(responseContent);
@@ -1849,7 +1784,6 @@ namespace SheetsCatalogImport.Services
             try
             {
                 string jsonSerializedData = JsonConvert.SerializeObject(skuSpec);
-                //Console.WriteLine($"SetSkuSpec: {jsonSerializedData}");
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
@@ -1913,7 +1847,6 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                //Console.WriteLine($"GetWarehouses [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     productAndSkuIdsResponse = JsonConvert.DeserializeObject<ProductAndSkuIdsResponse>(responseContent);
@@ -1957,7 +1890,6 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                //Console.WriteLine($"GetWarehouses [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     skuAndContextResponse = JsonConvert.DeserializeObject<SkuAndContextResponse>(responseContent);
@@ -2001,7 +1933,6 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"GetEansBySkuId [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     eans = JsonConvert.DeserializeObject<string[]>(responseContent);
@@ -2045,7 +1976,6 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                //Console.WriteLine($"ProductSearch [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     productSearchResponse = JsonConvert.DeserializeObject<ProductSearchResponse[]>(responseContent);
@@ -2114,7 +2044,6 @@ namespace SheetsCatalogImport.Services
             TimeSpan elapsedTime = DateTime.Now - importStarted;
             if (elapsedTime.TotalHours < SheetsCatalogImportConstants.LOCK_TIMEOUT)
             {
-                Console.WriteLine("Blocked by lock");
                 _context.Vtex.Logger.Info("ClearSheet", null, $"Blocked by lock.  Import started: {importStarted}");
                 return ($"Import started {importStarted} in progress.");
             }
@@ -2129,14 +2058,8 @@ namespace SheetsCatalogImport.Services
             if (folderIds != null)
             {
                 importFolderId = folderIds.ProductsFolderId;
-                //accountFolderId = folderIds.AccountFolderId;
-            }
-            else
-            {
-                Console.WriteLine("LoadFolderIds returned Null!");
             }
 
-            Console.WriteLine($"ListSheetsInFolder {importFolderId}");
             ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(importFolderId);
             if (spreadsheets != null)
             {
@@ -2208,12 +2131,7 @@ namespace SheetsCatalogImport.Services
             {
                 importFolderId = folderIds.ProductsFolderId;
             }
-            else
-            {
-                Console.WriteLine("LoadFolderIds returned Null!");
-            }
 
-            Console.WriteLine($"ListSheetsInFolder {importFolderId}");
             ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(importFolderId);
             if (spreadsheets != null)
             {
@@ -2314,7 +2232,6 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"GetPrice [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     getPriceResponse = JsonConvert.DeserializeObject<GetPriceResponse>(responseContent);
@@ -2358,7 +2275,6 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"GetProductSpecifications [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     productSpecifications = JsonConvert.DeserializeObject<ProductSpecification[]>(responseContent);
@@ -2402,7 +2318,6 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"GetSkuSpecifications [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     productSpecifications = JsonConvert.DeserializeObject<SkuSpecification[]>(responseContent);
@@ -2435,7 +2350,6 @@ namespace SheetsCatalogImport.Services
                 }
                 else
                 {
-                    Console.WriteLine($"    --------------- Could not parse {value}");
                     _context.Vtex.Logger.Warn("ParseDouble", null, $"Could not parse {value}");
                     return null;
                 }
@@ -2464,7 +2378,6 @@ namespace SheetsCatalogImport.Services
                 }
                 else
                 {
-                    Console.WriteLine($"    --------------- Could not parse {value}");
                     _context.Vtex.Logger.Warn("ParseCurrency", null, $"Could not parse {value}");
                     return null;
                 }
@@ -2486,7 +2399,6 @@ namespace SheetsCatalogImport.Services
                 }
                 else
                 {
-                    Console.WriteLine($"    --------------- Could not parse {value}");
                     _context.Vtex.Logger.Warn("ParseLong", null, $"Could not parse {value}");
                     return null;
                 }
@@ -2508,7 +2420,6 @@ namespace SheetsCatalogImport.Services
                 }
                 else
                 {
-                    Console.WriteLine($"    --------------- Could not parse {value}");
                     _context.Vtex.Logger.Warn("ParseBool", null, $"Could not parse {value}");
                     return false;
                 }
