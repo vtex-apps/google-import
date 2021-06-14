@@ -20,7 +20,10 @@ This app allows VTEX Catalog data to be imported from a spreadsheet on a user's 
 
 ## Notes
 
-- A Google Drive account may only be used on one site at a time.
+A Google Drive account may only be used on one site at a time.
+Using the app on multiple sites by the same user would requires the user to either
+ - Use a different Google account (email address) for each site.
+ - Only log in to a single site at a time.
 
 ## Contributors ✨
 
