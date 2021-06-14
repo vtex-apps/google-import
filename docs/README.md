@@ -18,6 +18,10 @@ This app allows VTEX Catalog data to be imported from a spreadsheet on a user's 
 
 3. Follow the instructions provided on the admin page to grant access to your Google Drive.
 
+## Notes
+
+- A Google Drive account may only be used on one site at a time.
+
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
