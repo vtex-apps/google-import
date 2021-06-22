@@ -73,6 +73,8 @@ namespace SheetsCatalogImport.Data
         public const string HEADER = "ProductId,SkuId,Category,Brand,ProductName,Product Reference Code,SkuName,Sku EAN/GTIN,SKU Reference Code,Height,Width,Length,Weight,Product Description,Search Keywords,MetaTag Description,Image URL 1,Image URL 2,Image URL 3,Image URL 4,Image URL 5,Display if Out of Stock,MSRP,Selling Price (Price to GPP),Available Quantity,ProductSpecs,Sku Specs,Update,Activate Sku,Status,Message";
         public const long VOLUMETIC_FACTOR = 166;
 
+        public const string ENV_CATALOG = "sandboxusdevus.vtexcommercestable.com.br";
+
         public class FolderNames
         {
             // Folder Structure:

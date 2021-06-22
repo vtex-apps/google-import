@@ -20,5 +20,11 @@ namespace SheetsCatalogImport.Services
         Task<string> ClearSheet();
         Task<ListFilesResponse> ListImageFiles();
         Task<string> AddImagesToSheet();
+
+        Task<bool> SetBrandList();
+
+        // Catalog V2
+        Task<UpdateResponse> CreateProductV2(ProductRequestV2 createProductRequest);
+        Task<GetBrandListV2Response> GetBrandListV2();
     }
 }

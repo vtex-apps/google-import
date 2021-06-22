@@ -14,5 +14,6 @@ namespace SheetsCatalogImport.Data
         Task SetImportLock(DateTime importStartTime);
         Task<DateTime> CheckImportLock();
         Task ClearImportLock();
+        Task<AppSettings> GetAppSettings();
     }
 }

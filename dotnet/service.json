@@ -65,6 +65,10 @@
     "searchTotals": {
       "path": "/sheets-catalog-import/search-totals",
       "public": true
+    },
+    "setBrandList": {
+      "path": "/sheets-catalog-import/set-brand-list",
+      "public": true
     }
   }
 }

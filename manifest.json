@@ -7,6 +7,17 @@
   "dependencies": {
     "vtex.styleguide": "9.x"
   },
+  "settingsSchema": {
+    "title": "Google Catalog Import",
+    "type": "object",
+    "properties": {
+      "isV2Catalog": {
+        "title": "Catalog V2",
+        "description": "Use V2 Catalog API",
+        "type": "boolean"
+      }
+    }
+  },
   "builders": {
     "dotnet": "2.x",
     "graphql": "1.x",
@@ -139,6 +150,22 @@
         "host": "doc-0g-3s-docs.googleusercontent.com",
         "path": "*"
       }
+    },
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "{{account}}.vtexcommercestable.com.br",
+        "path": "/api/catalogv2/products"
+      }
+    },
+    {
+      "name": "product-write"
+    },
+    {
+      "name": "brand-read"
+    },
+    {
+      "name": "category-read"
     },
     {
       "name": "vbase-read-write"

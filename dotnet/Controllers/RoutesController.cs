@@ -171,5 +171,11 @@
             string query = queryString["q"];
             return Json(await _vtexAPIService.SearchTotal(query));
         }
+
+        public async Task<IActionResult> SetBrandList()
+        {
+            Response.Headers.Add("Cache-Control", "no-cache");
+            return Json(await _vtexAPIService.SetBrandList());
+        }
     }
 }
