@@ -1430,6 +1430,7 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
+                
                 if (response.IsSuccessStatusCode)
                 {
                     getCategoryTreeResponse = JsonConvert.DeserializeObject<GetCategoryTreeResponse[]>(responseContent);
@@ -2760,7 +2761,10 @@ namespace SheetsCatalogImport.Services
 
                 if(isCatalogV2)
                 {
+                    Console.WriteLine($"     - isCatalogV2 -    ");
                     GetBrandListV2Response brandList = await this.GetBrandListV2();
+                    Console.WriteLine($"brandList = {brandList.Data.Length}");
+                    Array.Sort(brandList.Data, delegate(Datum x, Datum y) { return x.Name.CompareTo(y.Name); });
                     foreach(Datum data in brandList.Data)
                     {
                         Value updateValue = new Value
@@ -2771,11 +2775,26 @@ namespace SheetsCatalogImport.Services
                         updateBrandValueList.Add(updateValue);
                     }
 
-                    GetCategoryListV2Response categoryList = await this.GetCategoryListV2();
+                    //GetCategoryListV2Response categoryList = await this.GetCategoryListV2();
+                    GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(100);
+                    Console.WriteLine($"categoryList = {categoryTree.Length}");
+                    Dictionary<long, string> categoryList = await GetCategoryId(categoryTree);
+                    var sortedList = categoryList.OrderBy(d => d.Value).ToList();
+                    foreach(KeyValuePair<long, string> kvp in sortedList)
+                    {
+                        Value updateValue = new Value
+                        {
+                            UserEnteredValue = kvp.Value
+                        };
+
+                        updateCategoryValueList.Add(updateValue);
+                    }
                 }
                 else
                 {
                     GetBrandListResponse[] brandLists = await this.GetBrandList();
+                    Console.WriteLine($"brandList = {brandLists.Length}");
+                    Array.Sort(brandLists, delegate(GetBrandListResponse x, GetBrandListResponse y) { return x.Name.CompareTo(y.Name); });
                     foreach(GetBrandListResponse brandList in brandLists)
                     {
                         Value updateValue = new Value
@@ -2785,12 +2804,50 @@ namespace SheetsCatalogImport.Services
 
                         updateBrandValueList.Add(updateValue);
                     }
+
+                    GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(100);
+                    Console.WriteLine($"categoryList = {categoryTree.Length}");
+                    Dictionary<long, string> categoryList = await GetCategoryId(categoryTree);
+                    var sortedList = categoryList.OrderBy(d => d.Value).ToList();
+                    foreach(KeyValuePair<long, string> kvp in sortedList)
+                    {
+                        Value updateValue = new Value
+                        {
+                            UserEnteredValue = kvp.Value
+                        };
+
+                        updateCategoryValueList.Add(updateValue);
+                    }
                 }
 
                 BatchUpdate batchUpdate = new BatchUpdate
                 {
                     Requests = new Request[]
                     {
+                        new Request
+                        {
+                            SetDataValidation = new SetDataValidation
+                            {
+                                Range = new BatchUpdateRange
+                                {
+                                    StartRowIndex = 1,
+                                    EndRowIndex = SheetsCatalogImportConstants.DEFAULT_SHEET_SIZE,
+                                    SheetId = 0,
+                                    EndColumnIndex = categoryColumnIndex + 1,
+                                    StartColumnIndex = categoryColumnIndex
+                                },
+                                Rule = new Rule
+                                {
+                                    Condition = new Condition
+                                    {
+                                        Type = "ONE_OF_LIST",
+                                        Values = updateCategoryValueList.ToArray()
+                                    },
+                                    InputMessage = $"Choose Category",
+                                    Strict = false
+                                }
+                            }
+                        },
                         new Request
                         {
                             SetDataValidation = new SetDataValidation
@@ -2818,7 +2875,7 @@ namespace SheetsCatalogImport.Services
                     }
                 };
 
-                //success = await _googleSheetsService.BatchUpdate(sheetId, batchUpdate);
+                success = await _googleSheetsService.BatchUpdate(sheetId, batchUpdate);
             }
 
             return success;
