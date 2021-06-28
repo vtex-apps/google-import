@@ -2761,9 +2761,7 @@ namespace SheetsCatalogImport.Services
 
                 if(isCatalogV2)
                 {
-                    Console.WriteLine($"     - isCatalogV2 -    ");
                     GetBrandListV2Response brandList = await this.GetBrandListV2();
-                    Console.WriteLine($"brandList = {brandList.Data.Length}");
                     Array.Sort(brandList.Data, delegate(Datum x, Datum y) { return x.Name.CompareTo(y.Name); });
                     foreach(Datum data in brandList.Data)
                     {
@@ -2777,7 +2775,6 @@ namespace SheetsCatalogImport.Services
 
                     //GetCategoryListV2Response categoryList = await this.GetCategoryListV2();
                     GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(100);
-                    Console.WriteLine($"categoryList = {categoryTree.Length}");
                     Dictionary<long, string> categoryList = await GetCategoryId(categoryTree);
                     var sortedList = categoryList.OrderBy(d => d.Value).ToList();
                     foreach(KeyValuePair<long, string> kvp in sortedList)
@@ -2793,7 +2790,6 @@ namespace SheetsCatalogImport.Services
                 else
                 {
                     GetBrandListResponse[] brandLists = await this.GetBrandList();
-                    Console.WriteLine($"brandList = {brandLists.Length}");
                     Array.Sort(brandLists, delegate(GetBrandListResponse x, GetBrandListResponse y) { return x.Name.CompareTo(y.Name); });
                     foreach(GetBrandListResponse brandList in brandLists)
                     {
@@ -2806,7 +2802,6 @@ namespace SheetsCatalogImport.Services
                     }
 
                     GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(100);
-                    Console.WriteLine($"categoryList = {categoryTree.Length}");
                     Dictionary<long, string> categoryList = await GetCategoryId(categoryTree);
                     var sortedList = categoryList.OrderBy(d => d.Value).ToList();
                     foreach(KeyValuePair<long, string> kvp in sortedList)

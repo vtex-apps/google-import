@@ -40,7 +40,9 @@ namespace SheetsCatalogImport.GraphQL
                 "createSheet",
                 resolve: context =>
                 {
-                    return googleSheetsService.CreateSheet();
+                    var created = googleSheetsService.CreateSheet();
+                    var catalogAndBrand = vtexAPIService.SetBrandList();
+                    return created;
                 });
 
             Field<StringGraphType>(
@@ -54,7 +56,9 @@ namespace SheetsCatalogImport.GraphQL
                 "clearSheet",
                 resolve: context =>
                 {
-                    return vtexAPIService.ClearSheet();
+                    var cleared = vtexAPIService.ClearSheet();;
+                    var catalogAndBrand = vtexAPIService.SetBrandList();
+                    return cleared;
                 });
 
             Field<StringGraphType>(
