@@ -124,6 +124,12 @@ namespace SheetsCatalogImport.Models
 
         [JsonProperty("images")]
         public ProductV2Image[] Images { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("ean")]
+        public string Ean { get; set; }
     }
 
     public class ProductV2Dimensions

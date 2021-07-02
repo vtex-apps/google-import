@@ -282,12 +282,18 @@ namespace SheetsCatalogImport.Services
                                     CategoryIds = new string[]{"1"},
                                     Attributes = new AttributeV2[]
                                     {
-                                        //new AttributeV2{
-                                        //    Name = "",
-                                        //    Value = "",
-                                        //    Description = "",
-                                        //    IsFilterable = false
-                                        //}
+                                        new AttributeV2{
+                                            Name = "Search Keywords",
+                                            Value = searchKeywords,
+                                            Description = "",
+                                            IsFilterable = false
+                                        },
+                                        new AttributeV2{
+                                            Name = "Metatag Description",
+                                            Value = metaTagDescription,
+                                            Description = "",
+                                            IsFilterable = false
+                                        }
                                     },
 
                                     
@@ -314,7 +320,9 @@ namespace SheetsCatalogImport.Services
                                             //    new ProductV2Image{},
                                             //    new ProductV2Image{}
                                             //},
-                                            Sellers = new Seller[]{}
+                                            Sellers = new Seller[]{},
+                                            Name = skuName,
+                                            Ean = skuEanGtin
                                         }
                                     }
                                 };
@@ -588,7 +596,7 @@ namespace SheetsCatalogImport.Services
                                 }
                             }
                             
-                            if (success)
+                            if (success && !isCatalogV2)
                             {
                                 if (!string.IsNullOrEmpty(skuEanGtin))
                                 {
@@ -2316,6 +2324,52 @@ namespace SheetsCatalogImport.Services
             }
 
             return productSkusResponses;
+        }
+
+        public async Task<UpdateResponse> ExtraInfo(string productId, string ean)
+        {
+            // PUT https://accountName.vtexcommercestable.com.br/api/catalogv2/products/{productId}/extra-info
+
+            bool success = false;
+            string responseContent = string.Empty;
+            string statusCode = string.Empty;
+
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/catalogv2/products/{productId}/extra-info"),
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("ExtraInfo", null, $"Error setting ExtraInfo for Product Id '{productId}'", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
         }
 
         public async Task<string> ClearSheet()
