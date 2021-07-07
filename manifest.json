@@ -1,7 +1,7 @@
 {
   "name": "sheets-catalog-import",
   "vendor": "vtex",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "title": "Google Catalog Import",
   "description": "Update Catalog from Google Sheet",
   "dependencies": {

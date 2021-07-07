@@ -1,6 +1,6 @@
 {
   "name": "google-drive-import",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "scripts": {
     "test": "vtex-test-tools test"
   },
