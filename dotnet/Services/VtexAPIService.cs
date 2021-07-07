@@ -426,6 +426,27 @@ namespace SheetsCatalogImport.Services
 
                                 try
                                 {
+                                    ExtraInfo extraInfo = new ExtraInfo
+                                    {
+                                        ProductId = productid,
+                                        StoreFront = new StoreFront
+                                        {
+                                            ShowOutOfStock = await ParseBool(displayIfOutOfStock)
+                                        }
+                                    };
+
+                                    UpdateResponse productV2Response = await this.ExtraInfo(extraInfo);
+                                    success &= productV2Response.Success;
+                                    sb.AppendLine($"ExtraInfoV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
+                                }
+                                catch(Exception ex)
+                                {
+                                    success = false;
+                                    sb.AppendLine($"ExtraInfoV2: {ex.Message}");
+                                }
+
+                                try
+                                {
                                     UpdateResponse productV2Response = await this.CreateProductV2(productRequest);
                                     success &= productV2Response.Success;
                                     sb.AppendLine($"ProductV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
@@ -2326,13 +2347,14 @@ namespace SheetsCatalogImport.Services
             return productSkusResponses;
         }
 
-        public async Task<UpdateResponse> ExtraInfo(string productId, string ean)
+        public async Task<UpdateResponse> ExtraInfo(ExtraInfo extraInfo)
         {
             // PUT https://accountName.vtexcommercestable.com.br/api/catalogv2/products/{productId}/extra-info
 
             bool success = false;
             string responseContent = string.Empty;
             string statusCode = string.Empty;
+            string productId = extraInfo.ProductId;
 
             try
             {
