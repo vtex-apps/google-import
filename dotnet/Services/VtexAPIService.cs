@@ -49,6 +49,7 @@ namespace SheetsCatalogImport.Services
 
         public async Task<string> ProcessSheet()
         {
+            bool isCatalogV2 = false;
             string response = string.Empty;
 
             DateTime importStarted = await _sheetsCatalogImportRepository.CheckImportLock();
@@ -81,6 +82,12 @@ namespace SheetsCatalogImport.Services
             ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(importFolderId);
             if (spreadsheets != null)
             {
+                AppSettings appSettings = await _sheetsCatalogImportRepository.GetAppSettings();
+                if(appSettings != null)
+                {
+                    isCatalogV2 = appSettings.IsV2Catalog;
+                }
+
                 var sheetIds = spreadsheets.Files.Select(s => s.Id);
                 foreach (var sheetId in sheetIds)
                 {
@@ -235,70 +242,290 @@ namespace SheetsCatalogImport.Services
                         }
                         else
                         {
-                            sb.AppendLine(DateTime.Now.ToString());
-                            ProductRequest productRequest = new ProductRequest
-                            {
-                                Id = await ParseLong(productid),
-                                Name = productName,
-                                CategoryPath = category,
-                                BrandName = brand,
-                                RefId = productReferenceCode,
-                                Title = productName,
-                                LinkId = $"{productName}-{productReferenceCode}",
-                                Description = productDescription,
-                                ReleaseDate = DateTime.Now.ToString(),
-                                KeyWords = searchKeywords,
-                                IsVisible = true,
-                                IsActive = true,
-                                TaxCode = string.Empty,
-                                MetaTagDescription = metaTagDescription,
-                                ShowWithoutStock = await ParseBool(displayIfOutOfStock),
-                                Score = 1
-                            };
-
-                            UpdateResponse productUpdateResponse = await this.CreateProduct(productRequest);
-                            sb.AppendLine($"Product: [{productUpdateResponse.StatusCode}] {productUpdateResponse.Message}");
+                            UpdateResponse skuUpdateResponse = null;
+                            SkuRequest skuRequest = null;
                             long productId = 0;
-                            if (productUpdateResponse.Success)
+                            sb.AppendLine(DateTime.Now.ToString());
+                            if(isCatalogV2)
                             {
-                                ProductResponse productResponse = JsonConvert.DeserializeObject<ProductResponse>(productUpdateResponse.Message);
-                                productId = productResponse.Id;
-                                sb.AppendLine($"New Product Id {productId}");
-                                success = true;
-                                // Pause after creation to allow for caching
-                                //await Task.Delay(1000 * 2);
-                            }
-                            else if (productUpdateResponse.StatusCode.Equals("Conflict"))
-                            {
-                                // 409 - Same ID "Product already created with this Id"
-                                // 409 - Same RefId "There is already a product created with the same RefId with Product Id 100081202"
-                                // 409 - Same link Id "There is already a product with the same LinkId with Product Id 100081169"
-                                if (productUpdateResponse.Message.Contains("Product already created with this Id"))
+                                //string brandId = string.Empty;
+                                string brandId = "1";
+                                try
                                 {
-                                    success = true;
+                                    GetBrandListV2Response getBrandList = await GetBrandListV2();
+                                    Console.WriteLine($"getBrandList: {getBrandList.Metadata.Total}");
+                                    List<Datum> brandList = getBrandList.Data.Where(b => b.Name.Contains(brand, StringComparison.OrdinalIgnoreCase)).ToList();
+                                    Console.WriteLine($"brandList: {brandList.Count}");
+                                    brandId = brandList.Select(b => b.Id).FirstOrDefault().ToString();
+                                }
+                                catch(Exception ex)
+                                {
+                                    Console.WriteLine($"ERROR: {ex.Message}");
+                                }
 
-                                    if(doUpdate)
+                                ProductRequestV2 productRequest = new ProductRequestV2
+                                {
+                                    Id = productid,
+                                    Name = productName,
+                                    //CategoryPath = category,
+                                    BrandName = brand,
+                                    ExternalId = productReferenceCode,
+                                    Description = productDescription,
+                                    //KeyWords = searchKeywords,
+                                    //MetaTagDescription = metaTagDescription,
+                                    //ShowWithoutStock = await ParseBool(displayIfOutOfStock),
+
+                                    Status = "active",
+                                    Condition = "new",
+                                    Type = "physical",
+                                    BrandId = brandId,
+                                    CategoryIds = new string[]{"1"},
+                                    Attributes = new AttributeV2[]
                                     {
-                                        productId = productRequest.Id ?? 0;
-                                        //success = true;
-                                        productUpdateResponse = await this.UpdateProduct(productid, productRequest);
-                                        success = productUpdateResponse.Success;
-                                        sb.AppendLine($"Product Update: [{productUpdateResponse.StatusCode}] {productUpdateResponse.Message}");
+                                        new AttributeV2{
+                                            Name = "Search Keywords",
+                                            Value = searchKeywords,
+                                            Description = "",
+                                            IsFilterable = false
+                                        },
+                                        new AttributeV2{
+                                            Name = "Metatag Description",
+                                            Value = metaTagDescription,
+                                            Description = "",
+                                            IsFilterable = false
+                                        }
+                                    },
+
+                                    
+                                    Skus = new Skus[]
+                                    {
+                                        new Skus
+                                        {
+                                            Id = skuid,
+                                            IsActive = false,
+                                            //Name = skuName,
+                                            ExternalId = skuReferenceCode,
+                                            Dimensions = new ProductV2Dimensions
+                                            {
+                                                Height = await ParseDouble(height),
+                                                Length = await ParseDouble(length),
+                                                Width = await ParseDouble(width),
+                                            },
+                                            Weight = await ParseDouble(weight),
+                                            //Images = new ProductV2Image[]
+                                            //{
+                                            //    new ProductV2Image{},
+                                            //    new ProductV2Image{},
+                                            //    new ProductV2Image{},
+                                            //    new ProductV2Image{},
+                                            //    new ProductV2Image{}
+                                            //},
+                                            Sellers = new Seller[]{},
+                                            Name = skuName,
+                                            Ean = skuEanGtin
+                                        }
+                                    }
+                                };
+
+                                if (!string.IsNullOrEmpty(productSpecs))
+                                {
+                                    try
+                                    {
+                                        string[] allSpecs = productSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                        productRequest.Specs = new ProductV2Spec[allSpecs.Length];
+                                        for (int i = 0; i < allSpecs.Length; i++)
+                                        {
+                                            string[] specsArr = allSpecs[i].Split(':');
+                                            string specName = specsArr[0];
+                                            string[] specValueArr = specsArr[1].Split(',');
+
+                                            ProductV2Spec prodSpec = new ProductV2Spec
+                                            {
+                                                Name = specName,
+                                                Values = specValueArr
+                                            };
+
+                                            productRequest.Specs[i] = prodSpec;
+                                        }
+                                    }
+                                    catch(Exception ex)
+                                    {
+                                        success = false;
+                                        sb.AppendLine($"Error processing Product Specifications.");
+                                        _context.Vtex.Logger.Error("ProcessSheet", null, "Error processing Prod Spec", ex);
                                     }
                                 }
-                                else if (productUpdateResponse.Message.Contains("There is already a product"))
+
+                                if (!string.IsNullOrEmpty(skuSpecs))
                                 {
-                                    if (string.IsNullOrEmpty(productid))
+                                    try
                                     {
-                                        string[] splitResponse = productUpdateResponse.Message.Split(" ");
-                                        string parsedProductId = splitResponse[splitResponse.Length - 1];
-                                        parsedProductId = parsedProductId.Remove(parsedProductId.Length - 1, 1);
-                                        productId = await ParseLong(parsedProductId) ?? 0;
-                                        if (productId > 0)
+                                        string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                        productRequest.Skus[0].Specs = new SkusSpec[allSpecs.Length];
+                                        for (int i = 0; i < allSpecs.Length; i++)
                                         {
-                                            productid = productId.ToString();
-                                            success = true;
-                                            sb.AppendLine($"Using Product Id {productId}");
+                                            string[] specsArr = allSpecs[i].Split(':');
+                                            string specName = specsArr[0];
+                                            string specValue = specsArr[1];
+
+                                            SkusSpec skuSpec = new SkusSpec
+                                            {
+                                                Name = specName,
+                                                Value = specValue
+                                            };
+
+                                            productRequest.Skus[0].Specs[i] = skuSpec;
+                                        }
+                                    }
+                                    catch(Exception ex)
+                                    {
+                                        success = false;
+                                        sb.AppendLine($"Error processing Sku Specifications.");
+                                        _context.Vtex.Logger.Error("ProcessSheet", null, "Error processing Sku Spec", ex);
+                                    }
+                                }
+
+                                try
+                                {
+                                    List<ProductV2Image> imagesList = new List<ProductV2Image>();
+                                    if(!string.IsNullOrEmpty(imageUrl1))
+                                    {
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl1, Alt = "Main"});
+                                    }
+
+                                    if(!string.IsNullOrEmpty(imageUrl2))
+                                    {
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl2, Alt = "Alt 1"});
+                                    }
+
+                                    if(!string.IsNullOrEmpty(imageUrl3))
+                                    {
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl3, Alt = "Alt 2"});
+                                    }
+
+                                    if(!string.IsNullOrEmpty(imageUrl4))
+                                    {
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl4, Alt = "Alt 3"});
+                                    }
+
+                                    if(!string.IsNullOrEmpty(imageUrl5))
+                                    {
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl5, Alt = "Alt 4"});
+                                    }
+
+                                    if(imagesList.Count > 0)
+                                    {
+                                        productRequest.Skus[0].Images = imagesList.ToArray();
+                                    }
+                                }
+                                catch(Exception ex)
+                                {
+                                    success = false;
+                                    sb.AppendLine($"ImagesV2: {ex.Message}");
+                                }
+
+                                try
+                                {
+                                    ExtraInfo extraInfo = new ExtraInfo
+                                    {
+                                        ProductId = productid,
+                                        StoreFront = new StoreFront
+                                        {
+                                            ShowOutOfStock = await ParseBool(displayIfOutOfStock)
+                                        }
+                                    };
+
+                                    UpdateResponse productV2Response = await this.ExtraInfo(extraInfo);
+                                    success &= productV2Response.Success;
+                                    sb.AppendLine($"ExtraInfoV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
+                                }
+                                catch(Exception ex)
+                                {
+                                    success = false;
+                                    sb.AppendLine($"ExtraInfoV2: {ex.Message}");
+                                }
+
+                                try
+                                {
+                                    UpdateResponse productV2Response = await this.CreateProductV2(productRequest);
+                                    success &= productV2Response.Success;
+                                    sb.AppendLine($"ProductV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
+                                }
+                                catch(Exception ex)
+                                {
+                                    success = false;
+                                    sb.AppendLine($"ProductV2: {ex.Message}");
+                                }
+                            }
+                            else    // Catalog V1
+                            {
+                                ProductRequest productRequest = new ProductRequest
+                                {
+                                    Id = await ParseLong(productid),
+                                    Name = productName,
+                                    CategoryPath = category,
+                                    BrandName = brand,
+                                    RefId = productReferenceCode,
+                                    Title = productName,
+                                    LinkId = $"{productName}-{productReferenceCode}",
+                                    Description = productDescription,
+                                    ReleaseDate = DateTime.Now.ToString(),
+                                    KeyWords = searchKeywords,
+                                    IsVisible = true,
+                                    IsActive = true,
+                                    TaxCode = string.Empty,
+                                    MetaTagDescription = metaTagDescription,
+                                    ShowWithoutStock = await ParseBool(displayIfOutOfStock),
+                                    Score = 1
+                                };
+
+                                UpdateResponse productUpdateResponse = await this.CreateProduct(productRequest);
+                                sb.AppendLine($"Product: [{productUpdateResponse.StatusCode}] {productUpdateResponse.Message}");
+                                if (productUpdateResponse.Success)
+                                {
+                                    ProductResponse productResponse = JsonConvert.DeserializeObject<ProductResponse>(productUpdateResponse.Message);
+                                    productId = productResponse.Id;
+                                    sb.AppendLine($"New Product Id {productId}");
+                                    success = true;
+                                    // Pause after creation to allow for caching
+                                    //await Task.Delay(1000 * 2);
+                                }
+                                else if (productUpdateResponse.StatusCode.Equals("Conflict"))
+                                {
+                                    // 409 - Same ID "Product already created with this Id"
+                                    // 409 - Same RefId "There is already a product created with the same RefId with Product Id 100081202"
+                                    // 409 - Same link Id "There is already a product with the same LinkId with Product Id 100081169"
+                                    if (productUpdateResponse.Message.Contains("Product already created with this Id"))
+                                    {
+                                        success = true;
+
+                                        if(doUpdate)
+                                        {
+                                            productId = productRequest.Id ?? 0;
+                                            //success = true;
+                                            productUpdateResponse = await this.UpdateProduct(productid, productRequest);
+                                            success = productUpdateResponse.Success;
+                                            sb.AppendLine($"Product Update: [{productUpdateResponse.StatusCode}] {productUpdateResponse.Message}");
+                                        }
+                                    }
+                                    else if (productUpdateResponse.Message.Contains("There is already a product"))
+                                    {
+                                        if (string.IsNullOrEmpty(productid))
+                                        {
+                                            string[] splitResponse = productUpdateResponse.Message.Split(" ");
+                                            string parsedProductId = splitResponse[splitResponse.Length - 1];
+                                            parsedProductId = parsedProductId.Remove(parsedProductId.Length - 1, 1);
+                                            productId = await ParseLong(parsedProductId) ?? 0;
+                                            if (productId > 0)
+                                            {
+                                                productid = productId.ToString();
+                                                success = true;
+                                                sb.AppendLine($"Using Product Id {productId}");
+                                            }
+                                            else
+                                            {
+                                                success = false;
+                                            }
                                         }
                                         else
                                         {
@@ -307,6 +534,7 @@ namespace SheetsCatalogImport.Services
                                     }
                                     else
                                     {
+                                        // What to do in this case?
                                         success = false;
                                     }
                                 }
@@ -315,88 +543,81 @@ namespace SheetsCatalogImport.Services
                                     // What to do in this case?
                                     success = false;
                                 }
-                            }
-                            else
-                            {
-                                // What to do in this case?
-                                success = false;
-                            }
                             
-                            UpdateResponse skuUpdateResponse = null;
-                            SkuRequest skuRequest = null;
-                            if (success)
-                            {
-                                double? packagedHeight = await ParseDouble(height);
-                                double? packagedLength = await ParseDouble(length);
-                                double? packagedWidth = await ParseDouble(width);
-
-                                skuRequest = new SkuRequest
+                                if (success)
                                 {
-                                    Id = await ParseLong(skuid),
-                                    ProductId = productId, //await ParseLong(productid) ?? 0,
-                                    IsActive = false,
-                                    Name = skuName,
-                                    RefId = skuReferenceCode,
-                                    PackagedHeight = await ParseDouble(height),
-                                    PackagedLength = await ParseDouble(length),
-                                    PackagedWidth = await ParseDouble(width),
-                                    PackagedWeightKg = await ParseDouble(weight),
-                                    CubicWeight = (packagedHeight * packagedLength * packagedWidth) / SheetsCatalogImportConstants.VOLUMETIC_FACTOR, // https://www.efulfillmentservice.com/2012/11/how-to-calculate-dimensional-weight/
-                                    IsKit = false,
-                                    CommercialConditionId = 1,
-                                    MeasurementUnit = "un",
-                                    UnitMultiplier = 1,
-                                    KitItensSellApart = false
-                                };
+                                    double? packagedHeight = await ParseDouble(height);
+                                    double? packagedLength = await ParseDouble(length);
+                                    double? packagedWidth = await ParseDouble(width);
 
-
-                                skuUpdateResponse = await this.CreateSku(skuRequest);
-                                sb.AppendLine($"Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
-                                if(skuUpdateResponse.Success && string.IsNullOrEmpty(skuid))
-                                {
-                                    SkuResponse skuResponse = JsonConvert.DeserializeObject<SkuResponse>(skuUpdateResponse.Message);
-                                    skuid = skuResponse.Id.ToString();
-                                    sb.AppendLine($"New Sku Id {skuid}");
-                                }
-
-                                if (skuUpdateResponse.StatusCode.Equals("Conflict"))
-                                {
-                                    if (skuUpdateResponse.Message.Contains("Sku can not be created because the RefId is registered in Sku id"))
+                                    skuRequest = new SkuRequest
                                     {
-                                        if (string.IsNullOrEmpty(skuid))
+                                        Id = await ParseLong(skuid),
+                                        ProductId = productId, //await ParseLong(productid) ?? 0,
+                                        IsActive = false,
+                                        Name = skuName,
+                                        RefId = skuReferenceCode,
+                                        PackagedHeight = await ParseDouble(height),
+                                        PackagedLength = await ParseDouble(length),
+                                        PackagedWidth = await ParseDouble(width),
+                                        PackagedWeightKg = await ParseDouble(weight),
+                                        CubicWeight = (packagedHeight * packagedLength * packagedWidth) / SheetsCatalogImportConstants.VOLUMETIC_FACTOR, // https://www.efulfillmentservice.com/2012/11/how-to-calculate-dimensional-weight/
+                                        IsKit = false,
+                                        CommercialConditionId = 1,
+                                        MeasurementUnit = "un",
+                                        UnitMultiplier = 1,
+                                        KitItensSellApart = false
+                                    };
+
+
+                                    skuUpdateResponse = await this.CreateSku(skuRequest);
+                                    sb.AppendLine($"Sku: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
+                                    if(skuUpdateResponse.Success && string.IsNullOrEmpty(skuid))
+                                    {
+                                        SkuResponse skuResponse = JsonConvert.DeserializeObject<SkuResponse>(skuUpdateResponse.Message);
+                                        skuid = skuResponse.Id.ToString();
+                                        sb.AppendLine($"New Sku Id {skuid}");
+                                    }
+
+                                    if (skuUpdateResponse.StatusCode.Equals("Conflict"))
+                                    {
+                                        if (skuUpdateResponse.Message.Contains("Sku can not be created because the RefId is registered in Sku id"))
                                         {
-                                            string[] splitResponse = skuUpdateResponse.Message.Split(" ");
-                                            skuid = splitResponse[splitResponse.Length - 1];
-                                            skuid = skuid.Remove(skuid.Length - 1, 1);
                                             if (string.IsNullOrEmpty(skuid))
                                             {
-                                                success &= false;
-                                            }
-                                            else
-                                            {
-                                                success &= true;
-                                                sb.AppendLine($"Using Sku Id {skuid}");
+                                                string[] splitResponse = skuUpdateResponse.Message.Split(" ");
+                                                skuid = splitResponse[splitResponse.Length - 1];
+                                                skuid = skuid.Remove(skuid.Length - 1, 1);
+                                                if (string.IsNullOrEmpty(skuid))
+                                                {
+                                                    success &= false;
+                                                }
+                                                else
+                                                {
+                                                    success &= true;
+                                                    sb.AppendLine($"Using Sku Id {skuid}");
+                                                }
                                             }
                                         }
-                                    }
-                                    else if (skuUpdateResponse.Message.Contains("Sku already created with this Id"))
-                                    {
-                                        if (doUpdate)
+                                        else if (skuUpdateResponse.Message.Contains("Sku already created with this Id"))
                                         {
-                                            //success &= true;
-                                            skuUpdateResponse = await this.UpdateSku(skuid, skuRequest);
-                                            success &= skuUpdateResponse.Success;
-                                            sb.AppendLine($"Sku Update: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
+                                            if (doUpdate)
+                                            {
+                                                //success &= true;
+                                                skuUpdateResponse = await this.UpdateSku(skuid, skuRequest);
+                                                success &= skuUpdateResponse.Success;
+                                                sb.AppendLine($"Sku Update: [{skuUpdateResponse.StatusCode}] {skuUpdateResponse.Message}");
+                                            }
                                         }
                                     }
-                                }
-                                else
-                                {
-                                    success &= skuUpdateResponse.Success;
+                                    else
+                                    {
+                                        success &= skuUpdateResponse.Success;
+                                    }
                                 }
                             }
                             
-                            if (success)
+                            if (success && !isCatalogV2)
                             {
                                 if (!string.IsNullOrEmpty(skuEanGtin))
                                 {
@@ -410,7 +631,7 @@ namespace SheetsCatalogImport.Services
                                 }
                             }
                             
-                            if (success)
+                            if (success && !isCatalogV2)
                             {
                                 UpdateResponse updateResponse = null;
                                 bool imageSuccess = true;
@@ -525,7 +746,7 @@ namespace SheetsCatalogImport.Services
                                 }
                             }
                             
-                            if (success)
+                            if (success && !isCatalogV2)
                             {
                                 if (!string.IsNullOrEmpty(productSpecs))
                                 {
@@ -607,7 +828,7 @@ namespace SheetsCatalogImport.Services
                                 }
                             }
                             
-                            if(success && activateSku)
+                            if(success && activateSku && !isCatalogV2)
                             {
                                 skuRequest.IsActive = true;
                                 skuUpdateResponse = await this.UpdateSku(skuid, skuRequest);
@@ -1238,6 +1459,7 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
+                
                 if (response.IsSuccessStatusCode)
                 {
                     getCategoryTreeResponse = JsonConvert.DeserializeObject<GetCategoryTreeResponse[]>(responseContent);
@@ -1324,6 +1546,7 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"GetBrandList [{response.StatusCode}] {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     getBrandListResponse = JsonConvert.DeserializeObject<GetBrandListResponse[]>(responseContent);
@@ -1339,6 +1562,94 @@ namespace SheetsCatalogImport.Services
             }
 
             return getBrandListResponse;
+        }
+
+        public async Task<GetBrandListV2Response> GetBrandListV2()
+        {
+            // GET https://{accountName}.{environment}.com.br/api/catalogv2/brands
+
+            GetBrandListV2Response getBrandListResponse = null;
+
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/catalogv2/brands")
+                };
+
+                request.Headers.Add(SheetsCatalogImportConstants.USE_HTTPS_HEADER_NAME, "true");
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    getBrandListResponse = JsonConvert.DeserializeObject<GetBrandListV2Response>(responseContent);
+                }
+                else
+                {
+                    _context.Vtex.Logger.Warn("GetBrandListV2", null, $"Could not get brand list [{response.StatusCode}]");
+                }
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("GetBrandListV2", null, $"Error getting brand list", ex);
+            }
+
+            return getBrandListResponse;
+        }
+
+        public async Task<GetCategoryListV2Response> GetCategoryListV2()
+        {
+            // GET https://{accountName}.{environment}.com.br/api/catalogv2/brands
+
+            GetCategoryListV2Response getCategoryList = null;
+
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/catalogv2/category-tree")
+                };
+
+                request.Headers.Add(SheetsCatalogImportConstants.USE_HTTPS_HEADER_NAME, "true");
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"GetCategoryListV2: {responseContent}");
+                if (response.IsSuccessStatusCode)
+                {
+                    getCategoryList = JsonConvert.DeserializeObject<GetCategoryListV2Response>(responseContent);
+                }
+                else
+                {
+                    _context.Vtex.Logger.Warn("GetCategoryListV2", null, $"Could not get category list [{response.StatusCode}]");
+                }
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("GetCategoryListV2", null, $"Error getting category list", ex);
+            }
+
+            return getCategoryList;
         }
 
         public async Task<GetProductByIdResponse> GetProductById(string productId)
@@ -2036,6 +2347,53 @@ namespace SheetsCatalogImport.Services
             return productSkusResponses;
         }
 
+        public async Task<UpdateResponse> ExtraInfo(ExtraInfo extraInfo)
+        {
+            // PUT https://accountName.vtexcommercestable.com.br/api/catalogv2/products/{productId}/extra-info
+
+            bool success = false;
+            string responseContent = string.Empty;
+            string statusCode = string.Empty;
+            string productId = extraInfo.ProductId;
+
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/catalogv2/products/{productId}/extra-info"),
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("ExtraInfo", null, $"Error setting ExtraInfo for Product Id '{productId}'", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
         public async Task<string> ClearSheet()
         {
             string response = string.Empty;
@@ -2333,6 +2691,265 @@ namespace SheetsCatalogImport.Services
             }
 
             return productSpecifications;
+        }
+
+        public async Task<UpdateResponse> CreateProductV2(ProductRequestV2 createProductRequest)
+        {
+            // POST https://{{environment-catalog}}/api/catalogv2/products?an=
+
+            string responseContent = string.Empty;
+            bool success = false;
+            string statusCode = string.Empty;
+
+            try
+            {
+                string jsonSerializedData = JsonConvert.SerializeObject(createProductRequest);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    //RequestUri = new Uri($"http://{SheetsCatalogImportConstants.ENV_CATALOG}/api/catalogv2/products?an={this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}"),
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.vtexcommercestable.com.br/api/catalogv2/products"),
+                    Content = new StringContent(jsonSerializedData, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_JSON)
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+                _context.Vtex.Logger.Debug("CreateProductV2", null, $"Request: '{jsonSerializedData}' \nResponse: [{statusCode}] '{responseContent}'");
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("CreateProductV2", null, $"Error creating product {createProductRequest.Name}", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
+        public async Task<UpdateResponse> UpdateProductV2(ProductRequest updateProductRequest)
+        {
+            // PUT https://{accountName}.{environment}.com.br/api/catalogv2/products
+
+            string responseContent = string.Empty;
+            bool success = false;
+            string statusCode = string.Empty;
+
+            try
+            {
+                string jsonSerializedData = JsonConvert.SerializeObject(updateProductRequest);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/catalogv2/products"),
+                    Content = new StringContent(jsonSerializedData, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_JSON)
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("UpdateProduct", null, $"Error updating product {updateProductRequest.Title}", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
+        public async Task<bool> SetBrandList()
+        {
+            bool success = false;
+            string sheetId = string.Empty;
+            string importFolderId = null;
+            string accountName = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME];
+
+            FolderIds folderIds = await _sheetsCatalogImportRepository.LoadFolderIds(accountName);
+            if (folderIds != null)
+            {
+                importFolderId = folderIds.ProductsFolderId;
+            }
+
+            ListFilesResponse spreadsheets = await _googleSheetsService.ListSheetsInFolder(importFolderId);
+            if (spreadsheets != null)
+            {
+                sheetId = spreadsheets.Files.Select(s => s.Id).FirstOrDefault();
+                string sheetContent = await _googleSheetsService.GetSheet(sheetId, string.Empty);
+                GoogleSheet googleSheet = JsonConvert.DeserializeObject<GoogleSheet>(sheetContent);
+                string valueRange = googleSheet.ValueRanges[0].Range;
+                string sheetName = valueRange.Split("!")[0];
+                string[] sheetHeader = googleSheet.ValueRanges[0].Values[0];
+                int headerIndex = 0;
+                Dictionary<string, int> headerIndexDictionary = new Dictionary<string, int>();
+                foreach (string header in sheetHeader)
+                {
+                    headerIndexDictionary.Add(header.ToLower(), headerIndex);
+                    headerIndex++;
+                }
+
+                int brandColumnIndex = headerIndexDictionary["brand"];
+                int categoryColumnIndex = headerIndexDictionary["category"];
+                bool isCatalogV2 = false;
+                AppSettings appSettings = await _sheetsCatalogImportRepository.GetAppSettings();
+                if(appSettings != null)
+                {
+                    isCatalogV2 = appSettings.IsV2Catalog;
+                }
+
+                List<Value> updateBrandValueList = new List<Value>();
+                List<Value> updateCategoryValueList = new List<Value>();
+
+                if(isCatalogV2)
+                {
+                    GetBrandListV2Response brandList = await this.GetBrandListV2();
+                    Array.Sort(brandList.Data, delegate(Datum x, Datum y) { return x.Name.CompareTo(y.Name); });
+                    foreach(Datum data in brandList.Data)
+                    {
+                        Value updateValue = new Value
+                        {
+                            UserEnteredValue = data.Name
+                        };
+
+                        updateBrandValueList.Add(updateValue);
+                    }
+
+                    //GetCategoryListV2Response categoryList = await this.GetCategoryListV2();
+                    GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(100);
+                    Dictionary<long, string> categoryList = await GetCategoryId(categoryTree);
+                    var sortedList = categoryList.OrderBy(d => d.Value).ToList();
+                    foreach(KeyValuePair<long, string> kvp in sortedList)
+                    {
+                        Value updateValue = new Value
+                        {
+                            UserEnteredValue = kvp.Value
+                        };
+
+                        updateCategoryValueList.Add(updateValue);
+                    }
+                }
+                else
+                {
+                    GetBrandListResponse[] brandLists = await this.GetBrandList();
+                    Array.Sort(brandLists, delegate(GetBrandListResponse x, GetBrandListResponse y) { return x.Name.CompareTo(y.Name); });
+                    foreach(GetBrandListResponse brandList in brandLists)
+                    {
+                        Value updateValue = new Value
+                        {
+                            UserEnteredValue = brandList.Name
+                        };
+
+                        updateBrandValueList.Add(updateValue);
+                    }
+
+                    GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(100);
+                    Dictionary<long, string> categoryList = await GetCategoryId(categoryTree);
+                    var sortedList = categoryList.OrderBy(d => d.Value).ToList();
+                    foreach(KeyValuePair<long, string> kvp in sortedList)
+                    {
+                        Value updateValue = new Value
+                        {
+                            UserEnteredValue = kvp.Value
+                        };
+
+                        updateCategoryValueList.Add(updateValue);
+                    }
+                }
+
+                BatchUpdate batchUpdate = new BatchUpdate
+                {
+                    Requests = new Request[]
+                    {
+                        new Request
+                        {
+                            SetDataValidation = new SetDataValidation
+                            {
+                                Range = new BatchUpdateRange
+                                {
+                                    StartRowIndex = 1,
+                                    EndRowIndex = SheetsCatalogImportConstants.DEFAULT_SHEET_SIZE,
+                                    SheetId = 0,
+                                    EndColumnIndex = categoryColumnIndex + 1,
+                                    StartColumnIndex = categoryColumnIndex
+                                },
+                                Rule = new Rule
+                                {
+                                    Condition = new Condition
+                                    {
+                                        Type = "ONE_OF_LIST",
+                                        Values = updateCategoryValueList.ToArray()
+                                    },
+                                    InputMessage = $"Choose Category",
+                                    Strict = false
+                                }
+                            }
+                        },
+                        new Request
+                        {
+                            SetDataValidation = new SetDataValidation
+                            {
+                                Range = new BatchUpdateRange
+                                {
+                                    StartRowIndex = 1,
+                                    EndRowIndex = SheetsCatalogImportConstants.DEFAULT_SHEET_SIZE,
+                                    SheetId = 0,
+                                    EndColumnIndex = brandColumnIndex + 1,
+                                    StartColumnIndex = brandColumnIndex
+                                },
+                                Rule = new Rule
+                                {
+                                    Condition = new Condition
+                                    {
+                                        Type = "ONE_OF_LIST",
+                                        Values = updateBrandValueList.ToArray()
+                                    },
+                                    InputMessage = $"Choose Brand",
+                                    Strict = false
+                                }
+                            }
+                        }
+                    }
+                };
+
+                success = await _googleSheetsService.BatchUpdate(sheetId, batchUpdate);
+            }
+
+            return success;
         }
 
         private async Task<double?> ParseDouble(string value)

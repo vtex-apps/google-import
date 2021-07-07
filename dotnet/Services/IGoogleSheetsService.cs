@@ -30,5 +30,7 @@ namespace SheetsCatalogImport.Services
         Task<UpdateValuesResponse> WriteSpreadsheetValues(string fileId, ValueRange valueRange);
         Task<string> UpdateSpreadsheet(string fileId, BatchUpdate batchUpdate);
         Task<string> ClearSpreadsheet(string fileId, SheetRange sheetRange);
+
+        Task<bool> BatchUpdate(string sheetId, BatchUpdate batchUpdate);
     }
 }

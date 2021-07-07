@@ -1205,7 +1205,7 @@ namespace SheetsCatalogImport.Services
                         }
                     }
                 };
-
+                
                 var updateSheet = await this.UpdateSpreadsheet(sheetId, batchUpdate);
 
                 valueRange = new ValueRange
@@ -1818,6 +1818,13 @@ namespace SheetsCatalogImport.Services
             }
 
             return success;
+        }
+
+        public async Task<bool> BatchUpdate(string sheetId, BatchUpdate batchUpdate)
+        {
+            string result = await this.UpdateSpreadsheet(sheetId, batchUpdate);
+            Console.WriteLine($"BatchUpdate = '{result}");
+            return true;
         }
     }
 }
