@@ -248,8 +248,9 @@ namespace SheetsCatalogImport.Services
                             sb.AppendLine(DateTime.Now.ToString());
                             if(isCatalogV2)
                             {
-                                //string brandId = string.Empty;
-                                string brandId = "1";
+                                success = true;
+                                string brandId = string.Empty;
+                                //string brandId = "1";
                                 try
                                 {
                                     GetBrandListV2Response getBrandList = await GetBrandListV2();
@@ -260,43 +261,54 @@ namespace SheetsCatalogImport.Services
                                 }
                                 catch(Exception ex)
                                 {
-                                    Console.WriteLine($"ERROR: {ex.Message}");
+                                    Console.WriteLine($"Brand ERROR: {ex.Message}");
+                                }
+
+                                string categoryId = string.Empty;
+                                try
+                                {
+                                    GetCategoryListV2Response getCategoryList = await GetCategoryListV2();
+                                    Console.WriteLine($"getCategoryList: {getCategoryList.Roots.Length}");
+                                    var catList = getCategoryList.Roots.Where(c => c.Value.Name.Contains(category, StringComparison.OrdinalIgnoreCase)).ToList();
+                                    categoryId = catList.Select(c => c.Value.Id).FirstOrDefault().ToString();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Category ERROR: {ex.Message}");
                                 }
 
                                 ProductRequestV2 productRequest = new ProductRequestV2
                                 {
                                     Id = productid,
                                     Name = productName,
-                                    //CategoryPath = category,
+                                    CategoryPath = category,
                                     BrandName = brand,
                                     ExternalId = productReferenceCode,
                                     Description = productDescription,
                                     //KeyWords = searchKeywords,
                                     //MetaTagDescription = metaTagDescription,
                                     //ShowWithoutStock = await ParseBool(displayIfOutOfStock),
-
+                                    Images = new ProductV2Image[0],
                                     Status = "active",
                                     Condition = "new",
                                     Type = "physical",
                                     BrandId = brandId,
-                                    CategoryIds = new string[]{"1"},
-                                    Attributes = new AttributeV2[]
-                                    {
-                                        new AttributeV2{
-                                            Name = "Search Keywords",
-                                            Value = searchKeywords,
-                                            Description = "",
-                                            IsFilterable = false
-                                        },
-                                        new AttributeV2{
-                                            Name = "Metatag Description",
-                                            Value = metaTagDescription,
-                                            Description = "",
-                                            IsFilterable = false
-                                        }
-                                    },
-
-                                    
+                                    CategoryIds = new string[]{ categoryId },
+                                    //Attributes = new AttributeV2[2],
+                                    //{
+                                    //    new AttributeV2{
+                                    //        Name = "Search Keywords",
+                                    //        Value = searchKeywords,
+                                    //        Description = "",
+                                    //        IsFilterable = false
+                                    //    },
+                                    //    new AttributeV2{
+                                    //        Name = "Metatag Description",
+                                    //        Value = metaTagDescription,
+                                    //        Description = "",
+                                    //        IsFilterable = false
+                                    //    }
+                                    //},
                                     Skus = new Skus[]
                                     {
                                         new Skus
@@ -326,6 +338,53 @@ namespace SheetsCatalogImport.Services
                                         }
                                     }
                                 };
+
+                                if(!string.IsNullOrEmpty(searchKeywords) && !string.IsNullOrEmpty(metaTagDescription))
+                                {
+                                    productRequest.Attributes = new AttributeV2[]
+                                    {
+                                        new AttributeV2
+                                        {
+                                            Name = "Search Keywords",
+                                            Value = searchKeywords,
+                                            Description = "",
+                                            IsFilterable = false
+                                        },
+                                        new AttributeV2
+                                        {
+                                            Name = "Metatag Description",
+                                            Value = metaTagDescription,
+                                            Description = "",
+                                            IsFilterable = false
+                                        }
+                                    };
+                                }
+                                else if(string.IsNullOrEmpty(searchKeywords))
+                                {
+                                    productRequest.Attributes = new AttributeV2[]
+                                    {
+                                        new AttributeV2
+                                        {
+                                            Name = "Search Keywords",
+                                            Value = searchKeywords,
+                                            Description = "",
+                                            IsFilterable = false
+                                        }
+                                    };
+                                }
+                                else if (!string.IsNullOrEmpty(metaTagDescription))
+                                {
+                                    productRequest.Attributes = new AttributeV2[]
+                                    {
+                                        new AttributeV2
+                                        {
+                                            Name = "Metatag Description",
+                                            Value = metaTagDescription,
+                                            Description = "",
+                                            IsFilterable = false
+                                        }
+                                    };
+                                }
 
                                 if (!string.IsNullOrEmpty(productSpecs))
                                 {
@@ -413,10 +472,10 @@ namespace SheetsCatalogImport.Services
                                         imagesList.Add(new ProductV2Image{Url = imageUrl5, Alt = "Alt 4"});
                                     }
 
-                                    if(imagesList.Count > 0)
-                                    {
+                                    //if(imagesList.Count > 0)
+                                    //{
                                         productRequest.Skus[0].Images = imagesList.ToArray();
-                                    }
+                                    //}
                                 }
                                 catch(Exception ex)
                                 {
@@ -426,36 +485,43 @@ namespace SheetsCatalogImport.Services
 
                                 try
                                 {
-                                    ExtraInfo extraInfo = new ExtraInfo
-                                    {
-                                        ProductId = productid,
-                                        StoreFront = new StoreFront
-                                        {
-                                            ShowOutOfStock = await ParseBool(displayIfOutOfStock)
-                                        }
-                                    };
-
-                                    UpdateResponse productV2Response = await this.ExtraInfo(extraInfo);
-                                    success &= productV2Response.Success;
-                                    sb.AppendLine($"ExtraInfoV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
-                                }
-                                catch(Exception ex)
-                                {
-                                    success = false;
-                                    sb.AppendLine($"ExtraInfoV2: {ex.Message}");
-                                }
-
-                                try
-                                {
                                     UpdateResponse productV2Response = await this.CreateProductV2(productRequest);
                                     success &= productV2Response.Success;
-                                    sb.AppendLine($"ProductV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
+                                    //if (productV2Response.Success)
+                                    //{
+                                    //    sb.AppendLine($"ProductV2 : [{productV2Response.StatusCode}] ");
+                                    //}
+                                    //else
+                                    //{
+                                        sb.AppendLine($"ProductV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
+                                    //}
                                 }
                                 catch(Exception ex)
                                 {
                                     success = false;
                                     sb.AppendLine($"ProductV2: {ex.Message}");
                                 }
+
+                                //try
+                                //{
+                                //    ExtraInfo extraInfo = new ExtraInfo
+                                //    {
+                                //        ProductId = productid,
+                                //        StoreFront = new StoreFront
+                                //        {
+                                //            ShowOutOfStock = await ParseBool(displayIfOutOfStock)
+                                //        }
+                                //    };
+
+                                //    UpdateResponse productV2Response = await this.ExtraInfo(extraInfo);
+                                //    success &= productV2Response.Success;
+                                //    sb.AppendLine($"ExtraInfoV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
+                                //}
+                                //catch(Exception ex)
+                                //{
+                                //    success = false;
+                                //    sb.AppendLine($"ExtraInfoV2: {ex.Message}");
+                                //}
                             }
                             else    // Catalog V1
                             {
@@ -2849,19 +2915,30 @@ namespace SheetsCatalogImport.Services
                         updateBrandValueList.Add(updateValue);
                     }
 
-                    //GetCategoryListV2Response categoryList = await this.GetCategoryListV2();
-                    GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(100);
-                    Dictionary<long, string> categoryList = await GetCategoryId(categoryTree);
-                    var sortedList = categoryList.OrderBy(d => d.Value).ToList();
-                    foreach(KeyValuePair<long, string> kvp in sortedList)
+                    GetCategoryListV2Response categoryList = await this.GetCategoryListV2();
+                    Array.Sort(categoryList.Roots, delegate(Root x, Root y) { return x.Value.Name.CompareTo(y.Value.Name); });
+                    foreach(Root data in categoryList.Roots)
                     {
                         Value updateValue = new Value
                         {
-                            UserEnteredValue = kvp.Value
+                            UserEnteredValue = data.Value.Name
                         };
 
                         updateCategoryValueList.Add(updateValue);
                     }
+
+                    //GetCategoryTreeResponse[] categoryTree = await this.GetCategoryTree(100);
+                    //Dictionary<long, string> categoryList = await GetCategoryId(categoryTree);
+                    //var sortedList = categoryList.OrderBy(d => d.Value).ToList();
+                    //foreach(KeyValuePair<long, string> kvp in sortedList)
+                    //{
+                    //    Value updateValue = new Value
+                    //    {
+                    //        UserEnteredValue = kvp.Value
+                    //    };
+
+                    //    updateCategoryValueList.Add(updateValue);
+                    //}
                 }
                 else
                 {

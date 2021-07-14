@@ -29,8 +29,11 @@ namespace SheetsCatalogImport.Models
         [JsonProperty("brandId")]
         public string BrandId { get; set; }
 
-        [JsonProperty("BrandName")]
+        [JsonProperty("brandName")]
         public string BrandName { get; set; }
+
+        [JsonProperty("categoryPath")]
+        public string CategoryPath { get; set; }
 
         [JsonProperty("categoryIds")]
         public string[] CategoryIds { get; set; }
