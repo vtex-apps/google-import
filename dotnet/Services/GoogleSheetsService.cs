@@ -323,7 +323,7 @@ namespace SheetsCatalogImport.Services
             {
                 string fields = "*";
                 string query = "mimeType = 'application/vnd.google-apps.folder' and trashed = false";
-                if (!String.IsNullOrEmpty(parentId))
+                if (!string.IsNullOrEmpty(parentId))
                 {
                     query = $"{query} and '{parentId}' in parents";
                 }
