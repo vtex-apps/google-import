@@ -122,39 +122,40 @@ namespace SheetsCatalogImport.Services
                     string statusColumnLetter = await GetColumnLetter(headerIndexDictionary["status"]);
                     string messageColumnLetter = await GetColumnLetter(headerIndexDictionary["message"]);
 
+                    string previousProductId = string.Empty;
                     for (int index = 1; index < rowCount; index++)
                     {
                         success = true;
-                        string productid = string.Empty;
-                        string skuid = string.Empty;
-                        string category = string.Empty;
-                        string brand = string.Empty;
-                        string productName = string.Empty;
-                        string productReferenceCode = string.Empty;
-                        string skuName = string.Empty;
-                        string skuEanGtin = string.Empty;
-                        string skuReferenceCode = string.Empty;
-                        string height = string.Empty;
-                        string width = string.Empty;
-                        string length = string.Empty;
-                        string weight = string.Empty;
-                        string productDescription = string.Empty;
-                        string searchKeywords = string.Empty;
-                        string metaTagDescription = string.Empty;
-                        string imageUrl1 = string.Empty;
-                        string imageUrl2 = string.Empty;
-                        string imageUrl3 = string.Empty;
-                        string imageUrl4 = string.Empty;
-                        string imageUrl5 = string.Empty;
-                        string displayIfOutOfStock = string.Empty;
-                        string msrp = string.Empty;
-                        string sellingPrice = string.Empty;
-                        string availableQuantity = string.Empty;
-                        string productSpecs = string.Empty;
-                        string productSpecGroup = string.Empty;
-                        string productSpecField = string.Empty;
-                        string productSpecValue = string.Empty;
-                        string skuSpecs = string.Empty;
+                        string productid = null;
+                        string skuid = null;
+                        string category = null;
+                        string brand = null;
+                        string productName = null;
+                        string productReferenceCode = null;
+                        string skuName = null;
+                        string skuEanGtin = null;
+                        string skuReferenceCode = null;
+                        string height = null;
+                        string width = null;
+                        string length = null;
+                        string weight = null;
+                        string productDescription = null;
+                        string searchKeywords = null;
+                        string metaTagDescription = null;
+                        string imageUrl1 = null;
+                        string imageUrl2 = null;
+                        string imageUrl3 = null;
+                        string imageUrl4 = null;
+                        string imageUrl5 = null;
+                        string displayIfOutOfStock = null;
+                        string msrp = null;
+                        string sellingPrice = null;
+                        string availableQuantity = null;
+                        string productSpecs = null;
+                        string productSpecGroup = null;
+                        string productSpecField = null;
+                        string productSpecValue = null;
+                        string skuSpecs = null;
                         string[] dataValues = googleSheet.ValueRanges[0].Values[index];
                         if (headerIndexDictionary.ContainsKey("productid") && headerIndexDictionary["productid"] < dataValues.Count())
                             productid = dataValues[headerIndexDictionary["productid"]];
@@ -309,37 +310,198 @@ namespace SheetsCatalogImport.Services
                                     //        IsFilterable = false
                                     //    }
                                     //},
-                                    Skus = new Skus[]
-                                    {
-                                        new Skus
-                                        {
-                                            Id = skuid,
-                                            IsActive = false,
-                                            //Name = skuName,
-                                            ExternalId = skuReferenceCode,
-                                            Dimensions = new ProductV2Dimensions
-                                            {
-                                                Height = await ParseDouble(height),
-                                                Length = await ParseDouble(length),
-                                                Width = await ParseDouble(width),
-                                            },
-                                            Weight = await ParseDouble(weight),
-                                            //Images = new ProductV2Image[]
-                                            //{
-                                            //    new ProductV2Image{},
-                                            //    new ProductV2Image{},
-                                            //    new ProductV2Image{},
-                                            //    new ProductV2Image{},
-                                            //    new ProductV2Image{}
-                                            //},
-                                            Sellers = new Seller[]{},
-                                            Name = skuName,
-                                            Ean = skuEanGtin
-                                        }
-                                    }
+                                    //Skus = new Skus[]
+                                    //{
+                                    //    new Skus
+                                    //    {
+                                    //        Id = skuid,
+                                    //        IsActive = false,
+                                    //        //Name = skuName,
+                                    //        ExternalId = skuReferenceCode,
+                                    //        Dimensions = new ProductV2Dimensions
+                                    //        {
+                                    //            Height = await ParseDouble(height),
+                                    //            Length = await ParseDouble(length),
+                                    //            Width = await ParseDouble(width),
+                                    //        },
+                                    //        Weight = await ParseDouble(weight),
+                                    //        //Images = new ProductV2Image[]
+                                    //        //{
+                                    //        //    new ProductV2Image{},
+                                    //        //    new ProductV2Image{},
+                                    //        //    new ProductV2Image{},
+                                    //        //    new ProductV2Image{},
+                                    //        //    new ProductV2Image{}
+                                    //        //},
+                                    //        Sellers = new Seller[]{},
+                                    //        Name = skuName,
+                                    //        Ean = skuEanGtin
+                                    //    }
+                                    //}
+                                    Skus = new List<Skus>()
                                 };
 
-                                if(!string.IsNullOrEmpty(searchKeywords) && !string.IsNullOrEmpty(metaTagDescription))
+                                if(string.IsNullOrEmpty(productRequest.Id) && !string.IsNullOrEmpty(previousProductId))
+                                {
+                                    if(await this.PreviousLineIsSameProduct(headerIndexDictionary, googleSheet.ValueRanges[0].Values, index))
+                                    {
+                                        productRequest.Id = previousProductId;
+                                        sb.AppendLine($"Setting product id to '{previousProductId}'");
+                                        Console.WriteLine($"Setting product id to '{previousProductId}'");
+                                    }
+                                    else
+                                    {
+                                        previousProductId = string.Empty;
+                                    }
+                                }
+
+                                // Add the sku for the current line, then check the next line and add sku if the the product is the same
+                                SkusSpec[] skusSpecs = null;
+                                if (!string.IsNullOrEmpty(skuSpecs))
+                                {
+                                    try
+                                    {
+                                        string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                        skusSpecs = new SkusSpec[allSpecs.Length];
+                                        for (int i = 0; i < allSpecs.Length; i++)
+                                        {
+                                            string[] specsArr = allSpecs[i].Split(':');
+                                            string specName = specsArr[0];
+                                            string specValue = specsArr[1];
+
+                                            SkusSpec skuSpec = new SkusSpec
+                                            {
+                                                Name = specName,
+                                                Value = specValue
+                                            };
+
+                                            skusSpecs[i] = skuSpec;
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        success = false;
+                                        sb.AppendLine($"Error processing Sku Specifications.");
+                                        _context.Vtex.Logger.Error("ProcessSheet", null, "Error processing Sku Spec", ex);
+                                    }
+                                }
+
+                                Skus sku = new Skus
+                                {
+                                    Id = skuid,
+                                    IsActive = false,
+                                    ExternalId = skuReferenceCode,
+                                    Dimensions = new ProductV2Dimensions
+                                    {
+                                        Height = await ParseDouble(height),
+                                        Length = await ParseDouble(length),
+                                        Width = await ParseDouble(width),
+                                    },
+                                    Weight = await ParseDouble(weight),
+                                    Sellers = new Seller[] { },
+                                    Name = skuName,
+                                    Ean = skuEanGtin,
+                                    Specs = skusSpecs
+                                };
+
+                                productRequest.Skus.Add(sku);
+
+                                //for(int lineNumber = index; lineNumber <= rowCount; lineNumber++)
+                                //{
+                                //    string skuidNext = null;
+                                //    string skuReferenceCodeNext = null;
+                                //    string heightNext = null;
+                                //    string lengthNext = null;
+                                //    string widthNext = null;
+                                //    string weightNext = null;
+                                //    string skuNameNext = null;
+                                //    string skuEanGtinNext = null;
+                                //    string skuSpecsNext = null;
+
+                                //    if (await this.NextLineIsSameProduct(headerIndexDictionary, googleSheet.ValueRanges[0].Values, lineNumber))
+                                //    {
+                                //        Console.WriteLine($"!!! Line {lineNumber+1} is the same as {lineNumber} !!!");
+                                //        string[] arrLineValuesToWriteSkip = new string[] { "TBD", "Combining..." };
+                                //        arrValuesToWrite[index - offset - 1] = arrLineValuesToWriteSkip;
+                                //        index++;
+
+                                //        string[] dataValuesNext = googleSheet.ValueRanges[0].Values[lineNumber+1];
+                                //        if (headerIndexDictionary.ContainsKey("skuid") && headerIndexDictionary["skuid"] < dataValues.Count())
+                                //            skuidNext = dataValues[headerIndexDictionary["skuid"]];
+                                //        if (headerIndexDictionary.ContainsKey("skuname") && headerIndexDictionary["skuname"] < dataValues.Count())
+                                //            skuNameNext = dataValues[headerIndexDictionary["skuname"]];
+                                //        if (headerIndexDictionary.ContainsKey("sku ean/gtin") && headerIndexDictionary["sku ean/gtin"] < dataValues.Count())
+                                //            skuEanGtinNext = dataValues[headerIndexDictionary["sku ean/gtin"]];
+                                //        if (headerIndexDictionary.ContainsKey("sku reference code") && headerIndexDictionary["sku reference code"] < dataValues.Count())
+                                //            skuReferenceCodeNext = dataValues[headerIndexDictionary["sku reference code"]];
+                                //        if (headerIndexDictionary.ContainsKey("height") && headerIndexDictionary["height"] < dataValues.Count())
+                                //            heightNext = dataValues[headerIndexDictionary["height"]];
+                                //        if (headerIndexDictionary.ContainsKey("width") && headerIndexDictionary["width"] < dataValues.Count())
+                                //            widthNext = dataValues[headerIndexDictionary["width"]];
+                                //        if (headerIndexDictionary.ContainsKey("length") && headerIndexDictionary["length"] < dataValues.Count())
+                                //            lengthNext = dataValues[headerIndexDictionary["length"]];
+                                //        if (headerIndexDictionary.ContainsKey("weight") && headerIndexDictionary["weight"] < dataValues.Count())
+                                //            weightNext = dataValues[headerIndexDictionary["weight"]];
+                                //        if (headerIndexDictionary.ContainsKey("sku specs") && headerIndexDictionary["sku specs"] < dataValues.Count())
+                                //            skuSpecsNext = dataValues[headerIndexDictionary["sku specs"]];
+
+                                //        SkusSpec[] skusSpecsNext = null;
+                                //        if (!string.IsNullOrEmpty(skuSpecsNext))
+                                //        {
+                                //            try
+                                //            {
+                                //                string[] allSpecs = skuSpecsNext.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                //                skusSpecsNext = new SkusSpec[allSpecs.Length];
+                                //                for (int i = 0; i < allSpecs.Length; i++)
+                                //                {
+                                //                    string[] specsArr = allSpecs[i].Split(':');
+                                //                    string specName = specsArr[0];
+                                //                    string specValue = specsArr[1];
+
+                                //                    SkusSpec skuSpec = new SkusSpec
+                                //                    {
+                                //                        Name = specName,
+                                //                        Value = specValue
+                                //                    };
+
+                                //                    skusSpecsNext[i] = skuSpec;
+                                //                }
+                                //            }
+                                //            catch (Exception ex)
+                                //            {
+                                //                success = false;
+                                //                sb.AppendLine($"Error processing Sku Specifications.");
+                                //                _context.Vtex.Logger.Error("ProcessSheet", null, "Error processing Sku Spec", ex);
+                                //            }
+                                //        }
+
+                                //        Skus skuNext = new Skus
+                                //        {
+                                //            Id = skuidNext,
+                                //            IsActive = false,
+                                //            ExternalId = skuReferenceCodeNext,
+                                //            Dimensions = new ProductV2Dimensions
+                                //            {
+                                //                Height = await ParseDouble(heightNext),
+                                //                Length = await ParseDouble(lengthNext),
+                                //                Width = await ParseDouble(widthNext),
+                                //            },
+                                //            Weight = await ParseDouble(weightNext),
+                                //            Sellers = new Seller[] { },
+                                //            Name = skuNameNext,
+                                //            Ean = skuEanGtinNext,
+                                //            Specs = skusSpecsNext
+                                //        };
+
+                                //        productRequest.Skus.Add(skuNext);
+                                //    }
+                                //    else
+                                //    {
+                                //        break;
+                                //    }
+                                //}
+
+                                if (!string.IsNullOrEmpty(searchKeywords) && !string.IsNullOrEmpty(metaTagDescription))
                                 {
                                     productRequest.Attributes = new AttributeV2[]
                                     {
@@ -415,34 +577,34 @@ namespace SheetsCatalogImport.Services
                                     }
                                 }
 
-                                if (!string.IsNullOrEmpty(skuSpecs))
-                                {
-                                    try
-                                    {
-                                        string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-                                        productRequest.Skus[0].Specs = new SkusSpec[allSpecs.Length];
-                                        for (int i = 0; i < allSpecs.Length; i++)
-                                        {
-                                            string[] specsArr = allSpecs[i].Split(':');
-                                            string specName = specsArr[0];
-                                            string specValue = specsArr[1];
+                                //if (!string.IsNullOrEmpty(skuSpecs))
+                                //{
+                                //    try
+                                //    {
+                                //        string[] allSpecs = skuSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                //        productRequest.Skus[0].Specs = new SkusSpec[allSpecs.Length];
+                                //        for (int i = 0; i < allSpecs.Length; i++)
+                                //        {
+                                //            string[] specsArr = allSpecs[i].Split(':');
+                                //            string specName = specsArr[0];
+                                //            string specValue = specsArr[1];
 
-                                            SkusSpec skuSpec = new SkusSpec
-                                            {
-                                                Name = specName,
-                                                Value = specValue
-                                            };
+                                //            SkusSpec skuSpec = new SkusSpec
+                                //            {
+                                //                Name = specName,
+                                //                Value = specValue
+                                //            };
 
-                                            productRequest.Skus[0].Specs[i] = skuSpec;
-                                        }
-                                    }
-                                    catch(Exception ex)
-                                    {
-                                        success = false;
-                                        sb.AppendLine($"Error processing Sku Specifications.");
-                                        _context.Vtex.Logger.Error("ProcessSheet", null, "Error processing Sku Spec", ex);
-                                    }
-                                }
+                                //            productRequest.Skus[0].Specs[i] = skuSpec;
+                                //        }
+                                //    }
+                                //    catch(Exception ex)
+                                //    {
+                                //        success = false;
+                                //        sb.AppendLine($"Error processing Sku Specifications.");
+                                //        _context.Vtex.Logger.Error("ProcessSheet", null, "Error processing Sku Spec", ex);
+                                //    }
+                                //}
 
                                 try
                                 {
@@ -485,7 +647,37 @@ namespace SheetsCatalogImport.Services
 
                                 try
                                 {
-                                    UpdateResponse productV2Response = await this.CreateProductV2(productRequest);
+                                    UpdateResponse productV2Response = null;
+                                    if (string.IsNullOrEmpty(productRequest.Id))
+                                    {
+                                        productV2Response = await this.CreateProductV2(productRequest);
+                                        if (productV2Response.Success)
+                                        {
+                                            try
+                                            {
+                                                ProductResponseV2 productResponseV2 = JsonConvert.DeserializeObject<ProductResponseV2>(productV2Response.Message);
+                                                previousProductId = productResponseV2.Id;
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                sb.AppendLine($"Response Parse Error: {ex.Message}");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (productV2Response.StatusCode.Contains("Conflict"))
+                                            {
+
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        ProductRequestV2 existingProduct = await this.GetProductV2(productRequest.Id);
+                                        productRequest = await this.MergeProductRequestV2(existingProduct, productRequest);
+                                        productV2Response = await this.UpdateProductV2(productRequest);
+                                    }
+
                                     success &= productV2Response.Success;
                                     //if (productV2Response.Success)
                                     //{
@@ -493,6 +685,7 @@ namespace SheetsCatalogImport.Services
                                     //}
                                     //else
                                     //{
+                                        Console.WriteLine($"ProductV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
                                         sb.AppendLine($"ProductV2: [{productV2Response.StatusCode}] {productV2Response.Message}");
                                     //}
                                 }
@@ -772,7 +965,7 @@ namespace SheetsCatalogImport.Services
                                 else
                                 {
                                     sb.AppendLine($"Price: Empty");
-                                    success = false;
+                                    //success = false;
                                 }
                             }
                             
@@ -1700,7 +1893,7 @@ namespace SheetsCatalogImport.Services
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
                 string responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"GetCategoryListV2: {responseContent}");
+                //Console.WriteLine($"GetCategoryListV2: {responseContent}");
                 if (response.IsSuccessStatusCode)
                 {
                     getCategoryList = JsonConvert.DeserializeObject<GetCategoryListV2Response>(responseContent);
@@ -2810,6 +3003,57 @@ namespace SheetsCatalogImport.Services
             return updateResponse;
         }
 
+        public async Task<UpdateResponse> UpdateProductV2(ProductRequestV2 updateProductRequest)
+        {
+            // POST https://{{environment-catalog}}/api/catalogv2/products?an=
+
+            string responseContent = string.Empty;
+            bool success = false;
+            string statusCode = string.Empty;
+
+            try
+            {
+                string jsonSerializedData = JsonConvert.SerializeObject(updateProductRequest);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    //RequestUri = new Uri($"http://{SheetsCatalogImportConstants.ENV_CATALOG}/api/catalogv2/products?an={this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}"),
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.vtexcommercestable.com.br/api/catalogv2/products"),
+                    Content = new StringContent(jsonSerializedData, Encoding.UTF8, SheetsCatalogImportConstants.APPLICATION_JSON)
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+
+                success = response.IsSuccessStatusCode;
+                statusCode = response.StatusCode.ToString();
+                responseContent = await response.Content.ReadAsStringAsync();
+                _context.Vtex.Logger.Debug("UpdateProductV2", null, $"Request: '{jsonSerializedData}' \nResponse: [{statusCode}] '{responseContent}'");
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("UpdateProductV2", null, $"Error updating product {updateProductRequest.Name}", ex);
+            }
+
+            UpdateResponse updateResponse = new UpdateResponse
+            {
+                Success = success,
+                Message = responseContent,
+                StatusCode = statusCode
+            };
+
+            return updateResponse;
+        }
+
         public async Task<UpdateResponse> UpdateProductV2(ProductRequest updateProductRequest)
         {
             // PUT https://{accountName}.{environment}.com.br/api/catalogv2/products
@@ -2857,6 +3101,43 @@ namespace SheetsCatalogImport.Services
             };
 
             return updateResponse;
+        }
+
+        public async Task<ProductResponseV2> GetProductV2(string productId)
+        {
+            // GET https://{accountName}.{environment}.com.br/api/catalogv2/products/{productId}
+            ProductResponseV2 productResponseV2 = null;
+
+            try
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri($"http://{this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.VTEX_ACCOUNT_HEADER_NAME]}.{SheetsCatalogImportConstants.ENVIRONMENT}.com.br/api/catalogv2/products/{productId}")
+                };
+
+                string authToken = this._httpContextAccessor.HttpContext.Request.Headers[SheetsCatalogImportConstants.HEADER_VTEX_CREDENTIAL];
+                if (authToken != null)
+                {
+                    request.Headers.Add(SheetsCatalogImportConstants.AUTHORIZATION_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.VTEX_ID_HEADER_NAME, authToken);
+                    request.Headers.Add(SheetsCatalogImportConstants.PROXY_AUTHORIZATION_HEADER_NAME, authToken);
+                }
+
+                var client = _clientFactory.CreateClient();
+                var response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseContent = await response.Content.ReadAsStringAsync();
+                    productResponseV2 = JsonConvert.DeserializeObject<ProductResponseV2>(responseContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                _context.Vtex.Logger.Error("GetProductV2", null, $"Error getting product {productId}", ex);
+            }
+
+            return productResponseV2;
         }
 
         public async Task<bool> SetBrandList()
@@ -3148,6 +3429,280 @@ namespace SheetsCatalogImport.Services
             }
 
             return columnLetter;
+        }
+
+        private async Task<ProductRequestV2> MergeProductRequestV2(ProductRequestV2 existingProduct, ProductRequestV2 newProduct)
+        {
+            foreach (Skus skus in newProduct.Skus)
+            {
+                existingProduct.Skus.Add(skus);
+            }
+
+            return existingProduct;
+        }
+
+        private async Task<bool> NextLineIsSameProduct(Dictionary<string, int> headerIndexDictionary, string[][] values, int index)
+        {
+            bool isSame = false;
+
+            string[] dataValues = values[index];
+            string productid = null;
+            string category = null;
+            string brand = null;
+            string productName = null;
+            string productReferenceCode = null;
+            string productDescription = null;
+            string searchKeywords = null;
+            string metaTagDescription = null;
+            string imageUrl1 = null;
+            string imageUrl2 = null;
+            string imageUrl3 = null;
+            string imageUrl4 = null;
+            string imageUrl5 = null;
+            string productSpecs = null;
+            string productSpecGroup = null;
+            string productSpecField = null;
+            string productSpecValue = null;
+            if (headerIndexDictionary.ContainsKey("productid") && headerIndexDictionary["productid"] < dataValues.Count())
+                productid = dataValues[headerIndexDictionary["productid"]];
+            if (headerIndexDictionary.ContainsKey("category") && headerIndexDictionary["category"] < dataValues.Count())
+                category = dataValues[headerIndexDictionary["category"]];
+            if (headerIndexDictionary.ContainsKey("brand") && headerIndexDictionary["brand"] < dataValues.Count())
+                brand = dataValues[headerIndexDictionary["brand"]];
+            if (headerIndexDictionary.ContainsKey("productname") && headerIndexDictionary["productname"] < dataValues.Count())
+                productName = dataValues[headerIndexDictionary["productname"]];
+            if (headerIndexDictionary.ContainsKey("product reference code") && headerIndexDictionary["product reference code"] < dataValues.Count())
+                productReferenceCode = dataValues[headerIndexDictionary["product reference code"]];
+            if (headerIndexDictionary.ContainsKey("product description") && headerIndexDictionary["product description"] < dataValues.Count())
+                productDescription = dataValues[headerIndexDictionary["product description"]];
+            if (headerIndexDictionary.ContainsKey("search keywords") && headerIndexDictionary["search keywords"] < dataValues.Count())
+                searchKeywords = dataValues[headerIndexDictionary["search keywords"]];
+            if (headerIndexDictionary.ContainsKey("metatag description") && headerIndexDictionary["metatag description"] < dataValues.Count())
+                metaTagDescription = dataValues[headerIndexDictionary["metatag description"]];
+            if (headerIndexDictionary.ContainsKey("image url 1") && headerIndexDictionary["image url 1"] < dataValues.Count())
+                imageUrl1 = dataValues[headerIndexDictionary["image url 1"]];
+            if (headerIndexDictionary.ContainsKey("image url 2") && headerIndexDictionary["image url 2"] < dataValues.Count())
+                imageUrl2 = dataValues[headerIndexDictionary["image url 2"]];
+            if (headerIndexDictionary.ContainsKey("image url 3") && headerIndexDictionary["image url 3"] < dataValues.Count())
+                imageUrl3 = dataValues[headerIndexDictionary["image url 3"]];
+            if (headerIndexDictionary.ContainsKey("image url 4") && headerIndexDictionary["image url 4"] < dataValues.Count())
+                imageUrl4 = dataValues[headerIndexDictionary["image url 4"]];
+            if (headerIndexDictionary.ContainsKey("image url 5") && headerIndexDictionary["image url 5"] < dataValues.Count())
+                imageUrl5 = dataValues[headerIndexDictionary["image url 5"]];
+            if (headerIndexDictionary.ContainsKey("productspecs") && headerIndexDictionary["productspecs"] < dataValues.Count())
+                productSpecs = dataValues[headerIndexDictionary["productspecs"]];
+            if (headerIndexDictionary.ContainsKey("product spec group") && headerIndexDictionary["product spec group"] < dataValues.Count())
+                productSpecGroup = dataValues[headerIndexDictionary["product spec group"]];
+            if (headerIndexDictionary.ContainsKey("product spec field") && headerIndexDictionary["product spec field"] < dataValues.Count())
+                productSpecField = dataValues[headerIndexDictionary["product spec field"]];
+            if (headerIndexDictionary.ContainsKey("product spec value") && headerIndexDictionary["product spec value"] < dataValues.Count())
+                productSpecValue = dataValues[headerIndexDictionary["product spec value"]];
+
+            string[] dataValuesNext = values[index+1];
+            string productidNext = null;
+            string categoryNext = null;
+            string brandNext = null;
+            string productNameNext = null;
+            string productReferenceCodeNext = null;
+            string productDescriptionNext = null;
+            string searchKeywordsNext = null;
+            string metaTagDescriptionNext = null;
+            string imageUrl1Next = null;
+            string imageUrl2Next = null;
+            string imageUrl3Next = null;
+            string imageUrl4Next = null;
+            string imageUrl5Next = null;
+            string productSpecsNext = null;
+            string productSpecGroupNext = null;
+            string productSpecFieldNext = null;
+            string productSpecValueNext = null;
+            if (headerIndexDictionary.ContainsKey("productid") && headerIndexDictionary["productid"] < dataValuesNext.Count())
+                productidNext = dataValuesNext[headerIndexDictionary["productid"]];
+            if (headerIndexDictionary.ContainsKey("category") && headerIndexDictionary["category"] < dataValuesNext.Count())
+                categoryNext = dataValuesNext[headerIndexDictionary["category"]];
+            if (headerIndexDictionary.ContainsKey("brand") && headerIndexDictionary["brand"] < dataValuesNext.Count())
+                brandNext = dataValuesNext[headerIndexDictionary["brand"]];
+            if (headerIndexDictionary.ContainsKey("productname") && headerIndexDictionary["productname"] < dataValuesNext.Count())
+                productNameNext = dataValuesNext[headerIndexDictionary["productname"]];
+            if (headerIndexDictionary.ContainsKey("product reference code") && headerIndexDictionary["product reference code"] < dataValuesNext.Count())
+                productReferenceCodeNext = dataValuesNext[headerIndexDictionary["product reference code"]];
+            if (headerIndexDictionary.ContainsKey("product description") && headerIndexDictionary["product description"] < dataValuesNext.Count())
+                productDescriptionNext = dataValuesNext[headerIndexDictionary["product description"]];
+            if (headerIndexDictionary.ContainsKey("search keywords") && headerIndexDictionary["search keywords"] < dataValuesNext.Count())
+                searchKeywordsNext = dataValuesNext[headerIndexDictionary["search keywords"]];
+            if (headerIndexDictionary.ContainsKey("metatag description") && headerIndexDictionary["metatag description"] < dataValuesNext.Count())
+                metaTagDescriptionNext = dataValuesNext[headerIndexDictionary["metatag description"]];
+            if (headerIndexDictionary.ContainsKey("image url 1") && headerIndexDictionary["image url 1"] < dataValuesNext.Count())
+                imageUrl1Next = dataValuesNext[headerIndexDictionary["image url 1"]];
+            if (headerIndexDictionary.ContainsKey("image url 2") && headerIndexDictionary["image url 2"] < dataValuesNext.Count())
+                imageUrl2Next = dataValuesNext[headerIndexDictionary["image url 2"]];
+            if (headerIndexDictionary.ContainsKey("image url 3") && headerIndexDictionary["image url 3"] < dataValuesNext.Count())
+                imageUrl3Next = dataValuesNext[headerIndexDictionary["image url 3"]];
+            if (headerIndexDictionary.ContainsKey("image url 4") && headerIndexDictionary["image url 4"] < dataValuesNext.Count())
+                imageUrl4Next = dataValuesNext[headerIndexDictionary["image url 4"]];
+            if (headerIndexDictionary.ContainsKey("image url 5") && headerIndexDictionary["image url 5"] < dataValuesNext.Count())
+                imageUrl5Next = dataValuesNext[headerIndexDictionary["image url 5"]];
+            if (headerIndexDictionary.ContainsKey("productspecs") && headerIndexDictionary["productspecs"] < dataValuesNext.Count())
+                productSpecsNext = dataValuesNext[headerIndexDictionary["productspecs"]];
+            if (headerIndexDictionary.ContainsKey("product spec group") && headerIndexDictionary["product spec group"] < dataValuesNext.Count())
+                productSpecGroupNext = dataValuesNext[headerIndexDictionary["product spec group"]];
+            if (headerIndexDictionary.ContainsKey("product spec field") && headerIndexDictionary["product spec field"] < dataValuesNext.Count())
+                productSpecFieldNext = dataValuesNext[headerIndexDictionary["product spec field"]];
+            if (headerIndexDictionary.ContainsKey("product spec value") && headerIndexDictionary["product spec value"] < dataValuesNext.Count())
+                productSpecValueNext = dataValuesNext[headerIndexDictionary["product spec value"]];
+
+            isSame =
+                productid.Equals(productidNext) &&
+                category.Equals(categoryNext) &&
+                brand.Equals(brandNext) &&
+                productName.Equals(productNameNext) &&
+                productReferenceCode.Equals(productReferenceCodeNext) &&
+                productDescription.Equals(productDescriptionNext) &&
+                searchKeywords.Equals(searchKeywordsNext) &&
+                metaTagDescription.Equals(metaTagDescriptionNext) &&
+                imageUrl1.Equals(imageUrl1Next) &&
+                imageUrl2.Equals(imageUrl2Next) &&
+                imageUrl3.Equals(imageUrl3Next) &&
+                imageUrl4.Equals(imageUrl4Next) &&
+                imageUrl5.Equals(imageUrl5Next) &&
+                productSpecs.Equals(productSpecsNext) &&
+                productSpecGroup.Equals(productSpecGroupNext) &&
+                productSpecField.Equals(productSpecFieldNext) &&
+                productSpecValue.Equals(productSpecValueNext);
+
+            return isSame;
+        }
+
+        private async Task<bool> PreviousLineIsSameProduct(Dictionary<string, int> headerIndexDictionary, string[][] values, int index)
+        {
+            bool isSame = false;
+
+            string[] dataValues = values[index];
+            string productid = null;
+            string category = null;
+            string brand = null;
+            string productName = null;
+            string productReferenceCode = null;
+            string productDescription = null;
+            string searchKeywords = null;
+            string metaTagDescription = null;
+            string imageUrl1 = null;
+            string imageUrl2 = null;
+            string imageUrl3 = null;
+            string imageUrl4 = null;
+            string imageUrl5 = null;
+            string productSpecs = null;
+            string productSpecGroup = null;
+            string productSpecField = null;
+            string productSpecValue = null;
+            if (headerIndexDictionary.ContainsKey("productid") && headerIndexDictionary["productid"] < dataValues.Count())
+                productid = dataValues[headerIndexDictionary["productid"]];
+            if (headerIndexDictionary.ContainsKey("category") && headerIndexDictionary["category"] < dataValues.Count())
+                category = dataValues[headerIndexDictionary["category"]];
+            if (headerIndexDictionary.ContainsKey("brand") && headerIndexDictionary["brand"] < dataValues.Count())
+                brand = dataValues[headerIndexDictionary["brand"]];
+            if (headerIndexDictionary.ContainsKey("productname") && headerIndexDictionary["productname"] < dataValues.Count())
+                productName = dataValues[headerIndexDictionary["productname"]];
+            if (headerIndexDictionary.ContainsKey("product reference code") && headerIndexDictionary["product reference code"] < dataValues.Count())
+                productReferenceCode = dataValues[headerIndexDictionary["product reference code"]];
+            if (headerIndexDictionary.ContainsKey("product description") && headerIndexDictionary["product description"] < dataValues.Count())
+                productDescription = dataValues[headerIndexDictionary["product description"]];
+            if (headerIndexDictionary.ContainsKey("search keywords") && headerIndexDictionary["search keywords"] < dataValues.Count())
+                searchKeywords = dataValues[headerIndexDictionary["search keywords"]];
+            if (headerIndexDictionary.ContainsKey("metatag description") && headerIndexDictionary["metatag description"] < dataValues.Count())
+                metaTagDescription = dataValues[headerIndexDictionary["metatag description"]];
+            if (headerIndexDictionary.ContainsKey("image url 1") && headerIndexDictionary["image url 1"] < dataValues.Count())
+                imageUrl1 = dataValues[headerIndexDictionary["image url 1"]];
+            if (headerIndexDictionary.ContainsKey("image url 2") && headerIndexDictionary["image url 2"] < dataValues.Count())
+                imageUrl2 = dataValues[headerIndexDictionary["image url 2"]];
+            if (headerIndexDictionary.ContainsKey("image url 3") && headerIndexDictionary["image url 3"] < dataValues.Count())
+                imageUrl3 = dataValues[headerIndexDictionary["image url 3"]];
+            if (headerIndexDictionary.ContainsKey("image url 4") && headerIndexDictionary["image url 4"] < dataValues.Count())
+                imageUrl4 = dataValues[headerIndexDictionary["image url 4"]];
+            if (headerIndexDictionary.ContainsKey("image url 5") && headerIndexDictionary["image url 5"] < dataValues.Count())
+                imageUrl5 = dataValues[headerIndexDictionary["image url 5"]];
+            if (headerIndexDictionary.ContainsKey("productspecs") && headerIndexDictionary["productspecs"] < dataValues.Count())
+                productSpecs = dataValues[headerIndexDictionary["productspecs"]];
+            if (headerIndexDictionary.ContainsKey("product spec group") && headerIndexDictionary["product spec group"] < dataValues.Count())
+                productSpecGroup = dataValues[headerIndexDictionary["product spec group"]];
+            if (headerIndexDictionary.ContainsKey("product spec field") && headerIndexDictionary["product spec field"] < dataValues.Count())
+                productSpecField = dataValues[headerIndexDictionary["product spec field"]];
+            if (headerIndexDictionary.ContainsKey("product spec value") && headerIndexDictionary["product spec value"] < dataValues.Count())
+                productSpecValue = dataValues[headerIndexDictionary["product spec value"]];
+
+            string[] dataValuesPrev = values[index - 1];
+            string productidPrev = null;
+            string categoryPrev = null;
+            string brandPrev = null;
+            string productNamePrev = null;
+            string productReferenceCodePrev = null;
+            string productDescriptionPrev = null;
+            string searchKeywordsPrev = null;
+            string metaTagDescriptionPrev = null;
+            string imageUrl1Prev = null;
+            string imageUrl2Prev = null;
+            string imageUrl3Prev = null;
+            string imageUrl4Prev = null;
+            string imageUrl5Prev = null;
+            string productSpecsPrev = null;
+            string productSpecGroupPrev = null;
+            string productSpecFieldPrev = null;
+            string productSpecValuePrev = null;
+            if (headerIndexDictionary.ContainsKey("productid") && headerIndexDictionary["productid"] < dataValuesPrev.Count())
+                productidPrev = dataValuesPrev[headerIndexDictionary["productid"]];
+            if (headerIndexDictionary.ContainsKey("category") && headerIndexDictionary["category"] < dataValuesPrev.Count())
+                categoryPrev = dataValuesPrev[headerIndexDictionary["category"]];
+            if (headerIndexDictionary.ContainsKey("brand") && headerIndexDictionary["brand"] < dataValuesPrev.Count())
+                brandPrev = dataValuesPrev[headerIndexDictionary["brand"]];
+            if (headerIndexDictionary.ContainsKey("productname") && headerIndexDictionary["productname"] < dataValuesPrev.Count())
+                productNamePrev = dataValuesPrev[headerIndexDictionary["productname"]];
+            if (headerIndexDictionary.ContainsKey("product reference code") && headerIndexDictionary["product reference code"] < dataValuesPrev.Count())
+                productReferenceCodePrev = dataValuesPrev[headerIndexDictionary["product reference code"]];
+            if (headerIndexDictionary.ContainsKey("product description") && headerIndexDictionary["product description"] < dataValuesPrev.Count())
+                productDescriptionPrev = dataValuesPrev[headerIndexDictionary["product description"]];
+            if (headerIndexDictionary.ContainsKey("search keywords") && headerIndexDictionary["search keywords"] < dataValuesPrev.Count())
+                searchKeywordsPrev = dataValuesPrev[headerIndexDictionary["search keywords"]];
+            if (headerIndexDictionary.ContainsKey("metatag description") && headerIndexDictionary["metatag description"] < dataValuesPrev.Count())
+                metaTagDescriptionPrev = dataValuesPrev[headerIndexDictionary["metatag description"]];
+            if (headerIndexDictionary.ContainsKey("image url 1") && headerIndexDictionary["image url 1"] < dataValuesPrev.Count())
+                imageUrl1Prev = dataValuesPrev[headerIndexDictionary["image url 1"]];
+            if (headerIndexDictionary.ContainsKey("image url 2") && headerIndexDictionary["image url 2"] < dataValuesPrev.Count())
+                imageUrl2Prev = dataValuesPrev[headerIndexDictionary["image url 2"]];
+            if (headerIndexDictionary.ContainsKey("image url 3") && headerIndexDictionary["image url 3"] < dataValuesPrev.Count())
+                imageUrl3Prev = dataValuesPrev[headerIndexDictionary["image url 3"]];
+            if (headerIndexDictionary.ContainsKey("image url 4") && headerIndexDictionary["image url 4"] < dataValuesPrev.Count())
+                imageUrl4Prev = dataValuesPrev[headerIndexDictionary["image url 4"]];
+            if (headerIndexDictionary.ContainsKey("image url 5") && headerIndexDictionary["image url 5"] < dataValuesPrev.Count())
+                imageUrl5Prev = dataValuesPrev[headerIndexDictionary["image url 5"]];
+            if (headerIndexDictionary.ContainsKey("productspecs") && headerIndexDictionary["productspecs"] < dataValuesPrev.Count())
+                productSpecsPrev = dataValuesPrev[headerIndexDictionary["productspecs"]];
+            if (headerIndexDictionary.ContainsKey("product spec group") && headerIndexDictionary["product spec group"] < dataValuesPrev.Count())
+                productSpecGroupPrev = dataValuesPrev[headerIndexDictionary["product spec group"]];
+            if (headerIndexDictionary.ContainsKey("product spec field") && headerIndexDictionary["product spec field"] < dataValuesPrev.Count())
+                productSpecFieldPrev = dataValuesPrev[headerIndexDictionary["product spec field"]];
+            if (headerIndexDictionary.ContainsKey("product spec value") && headerIndexDictionary["product spec value"] < dataValuesPrev.Count())
+                productSpecValuePrev = dataValuesPrev[headerIndexDictionary["product spec value"]];
+
+            isSame =
+                productid.Equals(productidPrev) &&
+                category.Equals(categoryPrev) &&
+                brand.Equals(brandPrev) &&
+                productName.Equals(productNamePrev) &&
+                productReferenceCode.Equals(productReferenceCodePrev) &&
+                productDescription.Equals(productDescriptionPrev) &&
+                searchKeywords.Equals(searchKeywordsPrev) &&
+                metaTagDescription.Equals(metaTagDescriptionPrev) &&
+                imageUrl1.Equals(imageUrl1Prev) &&
+                imageUrl2.Equals(imageUrl2Prev) &&
+                imageUrl3.Equals(imageUrl3Prev) &&
+                imageUrl4.Equals(imageUrl4Prev) &&
+                imageUrl5.Equals(imageUrl5Prev) &&
+                productSpecs.Equals(productSpecsPrev) &&
+                productSpecGroup.Equals(productSpecGroupPrev) &&
+                productSpecField.Equals(productSpecFieldPrev) &&
+                productSpecValue.Equals(productSpecValuePrev);
+
+            return isSame;
         }
     }
 }
