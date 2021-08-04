@@ -355,6 +355,8 @@ namespace SheetsCatalogImport.Services
                                     }
                                 }
 
+                                Console.WriteLine($"productRequest.Id = '{productRequest.Id}'   ");
+
                                 // Add the sku for the current line, then check the next line and add sku if the the product is the same
                                 SkusSpec[] skusSpecs = null;
                                 if (!string.IsNullOrEmpty(skuSpecs))
@@ -404,7 +406,9 @@ namespace SheetsCatalogImport.Services
                                     Specs = skusSpecs
                                 };
 
+                                Console.WriteLine("Adding Sku...");
                                 productRequest.Skus.Add(sku);
+                                Console.WriteLine("Added Sku.");
 
                                 //for(int lineNumber = index; lineNumber <= rowCount; lineNumber++)
                                 //{
@@ -503,6 +507,7 @@ namespace SheetsCatalogImport.Services
 
                                 if (!string.IsNullOrEmpty(searchKeywords) && !string.IsNullOrEmpty(metaTagDescription))
                                 {
+                                    Console.WriteLine("Search Keywords & Metatag Description");
                                     productRequest.Attributes = new AttributeV2[]
                                     {
                                         new AttributeV2
@@ -523,6 +528,7 @@ namespace SheetsCatalogImport.Services
                                 }
                                 else if(string.IsNullOrEmpty(searchKeywords))
                                 {
+                                    Console.WriteLine("Search Keywords only");
                                     productRequest.Attributes = new AttributeV2[]
                                     {
                                         new AttributeV2
@@ -536,6 +542,7 @@ namespace SheetsCatalogImport.Services
                                 }
                                 else if (!string.IsNullOrEmpty(metaTagDescription))
                                 {
+                                    Console.WriteLine("Metatag Description only");
                                     productRequest.Attributes = new AttributeV2[]
                                     {
                                         new AttributeV2
@@ -550,6 +557,7 @@ namespace SheetsCatalogImport.Services
 
                                 if (!string.IsNullOrEmpty(productSpecs))
                                 {
+                                    Console.WriteLine(" - productSpecs - ");
                                     try
                                     {
                                         string[] allSpecs = productSpecs.Split(new string[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
@@ -608,6 +616,7 @@ namespace SheetsCatalogImport.Services
 
                                 try
                                 {
+                                    Console.WriteLine(" - imagesList - ");
                                     List<ProductV2Image> imagesList = new List<ProductV2Image>();
                                     if(!string.IsNullOrEmpty(imageUrl1))
                                     {
@@ -651,31 +660,45 @@ namespace SheetsCatalogImport.Services
                                     if (string.IsNullOrEmpty(productRequest.Id))
                                     {
                                         productV2Response = await this.CreateProductV2(productRequest);
-                                        if (productV2Response.Success)
+                                        if (productV2Response != null)
                                         {
-                                            try
+                                            if (productV2Response.Success)
                                             {
-                                                ProductResponseV2 productResponseV2 = JsonConvert.DeserializeObject<ProductResponseV2>(productV2Response.Message);
-                                                previousProductId = productResponseV2.Id;
+                                                try
+                                                {
+                                                    ProductResponseV2 productResponseV2 = JsonConvert.DeserializeObject<ProductResponseV2>(productV2Response.Message);
+                                                    previousProductId = productResponseV2.Id;
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    sb.AppendLine($"Response Parse Error: {ex.Message}");
+                                                }
                                             }
-                                            catch (Exception ex)
+                                            else
                                             {
-                                                sb.AppendLine($"Response Parse Error: {ex.Message}");
+                                                if (productV2Response.StatusCode.Contains("Conflict"))
+                                                {
+
+                                                }
                                             }
                                         }
                                         else
                                         {
-                                            if (productV2Response.StatusCode.Contains("Conflict"))
-                                            {
-
-                                            }
+                                            Console.WriteLine("CreateProductV2 NULL Response!");
                                         }
                                     }
                                     else
                                     {
                                         ProductRequestV2 existingProduct = await this.GetProductV2(productRequest.Id);
-                                        productRequest = await this.MergeProductRequestV2(existingProduct, productRequest);
-                                        productV2Response = await this.UpdateProductV2(productRequest);
+                                        if (existingProduct != null)
+                                        {
+                                            productRequest = await this.MergeProductRequestV2(existingProduct, productRequest);
+                                            productV2Response = await this.UpdateProductV2(productRequest);
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine("GetProductV2 NULL Response!");
+                                        }
                                     }
 
                                     success &= productV2Response.Success;
@@ -692,7 +715,8 @@ namespace SheetsCatalogImport.Services
                                 catch(Exception ex)
                                 {
                                     success = false;
-                                    sb.AppendLine($"ProductV2: {ex.Message}");
+                                    Console.WriteLine($"ProductV2: (err): {ex.Message}");
+                                    sb.AppendLine($"ProductV2 (err): {ex.Message}");
                                 }
 
                                 //try
@@ -3105,6 +3129,7 @@ namespace SheetsCatalogImport.Services
 
         public async Task<ProductResponseV2> GetProductV2(string productId)
         {
+            Console.WriteLine($"GetProductV2 '{productId}'");
             // GET https://{accountName}.{environment}.com.br/api/catalogv2/products/{productId}
             ProductResponseV2 productResponseV2 = null;
 
@@ -3126,10 +3151,15 @@ namespace SheetsCatalogImport.Services
 
                 var client = _clientFactory.CreateClient();
                 var response = await client.SendAsync(request);
+                string responseContent = await response.Content.ReadAsStringAsync();
                 if (response.IsSuccessStatusCode)
                 {
-                    string responseContent = await response.Content.ReadAsStringAsync();
                     productResponseV2 = JsonConvert.DeserializeObject<ProductResponseV2>(responseContent);
+                }
+                else
+                {
+                    Console.WriteLine($"GetProductV2 [{response.StatusCode}] {responseContent}");
+                    _context.Vtex.Logger.Warn("GetProductV2", null, $"Could not get product {productId}.\n[{response.StatusCode}] {responseContent}");
                 }
             }
             catch (Exception ex)
@@ -3431,11 +3461,28 @@ namespace SheetsCatalogImport.Services
             return columnLetter;
         }
 
-        private async Task<ProductRequestV2> MergeProductRequestV2(ProductRequestV2 existingProduct, ProductRequestV2 newProduct)
+        private async Task<ProductRequestV2> MergeProductRequestV2(ProductRequestV2 existingProduct, ProductRequestV2 newProduct, bool update = false)
         {
+            Console.WriteLine("MergeProductRequestV2");
             foreach (Skus skus in newProduct.Skus)
             {
-                existingProduct.Skus.Add(skus);
+                Console.WriteLine($" - Adding sku '{skus.Id}'");
+                if (existingProduct.Skus.Any(s => s.Id.Equals(skus.Id)))
+                {
+                    if (update)
+                    {
+                        existingProduct.Skus.Remove(existingProduct.Skus.Where(s => s.Id.Equals(skus.Id)).FirstOrDefault());
+                        existingProduct.Skus.Add(skus);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Skipping...");
+                    }
+                }
+                else
+                {
+                    existingProduct.Skus.Add(skus);
+                }
             }
 
             return existingProduct;

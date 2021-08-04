@@ -162,6 +162,9 @@
       "name": "product-write"
     },
     {
+      "name": "product-read"
+    },
+    {
       "name": "brand-read"
     },
     {
