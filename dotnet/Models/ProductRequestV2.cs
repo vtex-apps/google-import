@@ -1,8 +1,10 @@
 namespace SheetsCatalogImport.Models
 {
     using System;
+    using System.Collections.Generic;
     using Newtonsoft.Json;
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class ProductRequestV2
     {
         [JsonProperty("id")]
@@ -54,12 +56,14 @@ namespace SheetsCatalogImport.Models
         public ProductV2Image[] Images { get; set; }
 
         [JsonProperty("skus")]
-        public Skus[] Skus { get; set; }
+        //public Skus[] Skus { get; set; }
+        public List<Skus> Skus { get; set; }
 
         [JsonProperty("channels")]
         public Channel[] Channels { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class AttributeV2
     {
         [JsonProperty("name")]
@@ -75,6 +79,7 @@ namespace SheetsCatalogImport.Models
         public bool IsFilterable { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class Channel
     {
         [JsonProperty("id")]
@@ -90,6 +95,7 @@ namespace SheetsCatalogImport.Models
         public string BrandId { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class ProductV2Image
     {
         [JsonProperty("url")]
@@ -99,6 +105,7 @@ namespace SheetsCatalogImport.Models
         public string Alt { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class Skus
     {
         [JsonProperty("id")]
@@ -135,6 +142,7 @@ namespace SheetsCatalogImport.Models
         public string Ean { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class ProductV2Dimensions
     {
         [JsonProperty("width")]
@@ -147,12 +155,14 @@ namespace SheetsCatalogImport.Models
         public double? Length { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class Seller
     {
         [JsonProperty("id")]
         public string Id { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class SkusSpec
     {
         [JsonProperty("name")]
@@ -162,6 +172,7 @@ namespace SheetsCatalogImport.Models
         public string Value { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
     public class ProductV2Spec
     {
         [JsonProperty("name")]
