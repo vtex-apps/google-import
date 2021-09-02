@@ -289,7 +289,7 @@ namespace SheetsCatalogImport.Services
                                     //KeyWords = searchKeywords,
                                     //MetaTagDescription = metaTagDescription,
                                     //ShowWithoutStock = await ParseBool(displayIfOutOfStock),
-                                    Images = new ProductV2Image[0],
+                                    Images = new List<ProductV2Image>(),
                                     Status = "active",
                                     Condition = "new",
                                     Type = "physical",
@@ -620,33 +620,34 @@ namespace SheetsCatalogImport.Services
                                     List<ProductV2Image> imagesList = new List<ProductV2Image>();
                                     if(!string.IsNullOrEmpty(imageUrl1))
                                     {
-                                        imagesList.Add(new ProductV2Image{Url = imageUrl1, Alt = "Main"});
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl1, Alt = "Main", Id = "Main" });
                                     }
 
                                     if(!string.IsNullOrEmpty(imageUrl2))
                                     {
-                                        imagesList.Add(new ProductV2Image{Url = imageUrl2, Alt = "Alt 1"});
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl2, Alt = "Alt 1", Id = "Alt 1" });
                                     }
 
                                     if(!string.IsNullOrEmpty(imageUrl3))
                                     {
-                                        imagesList.Add(new ProductV2Image{Url = imageUrl3, Alt = "Alt 2"});
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl3, Alt = "Alt 2", Id = "Alt 2" });
                                     }
 
                                     if(!string.IsNullOrEmpty(imageUrl4))
                                     {
-                                        imagesList.Add(new ProductV2Image{Url = imageUrl4, Alt = "Alt 3"});
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl4, Alt = "Alt 3", Id = "Alt 3" });
                                     }
 
                                     if(!string.IsNullOrEmpty(imageUrl5))
                                     {
-                                        imagesList.Add(new ProductV2Image{Url = imageUrl5, Alt = "Alt 4"});
+                                        imagesList.Add(new ProductV2Image{Url = imageUrl5, Alt = "Alt 4", Id = "Alt 4" });
                                     }
 
-                                    //if(imagesList.Count > 0)
-                                    //{
-                                        productRequest.Skus[0].Images = imagesList.ToArray();
-                                    //}
+                                    if(imagesList.Count > 0)
+                                    {
+                                        productRequest.Images = imagesList;
+                                        productRequest.Skus.First().Images = imagesList.Select(i => i.Id).ToArray();
+                                    }
                                 }
                                 catch(Exception ex)
                                 {

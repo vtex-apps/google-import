@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Changed image object to latest format
+
 ## [0.1.6] - 2021-08-27
 
 ### Changed
