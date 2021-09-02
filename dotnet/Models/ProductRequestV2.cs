@@ -53,7 +53,7 @@ namespace SheetsCatalogImport.Models
         public string Slug { get; set; }
 
         [JsonProperty("images")]
-        public ProductV2Image[] Images { get; set; }
+        public List<ProductV2Image> Images { get; set; }
 
         [JsonProperty("skus")]
         //public Skus[] Skus { get; set; }
@@ -103,6 +103,9 @@ namespace SheetsCatalogImport.Models
 
         [JsonProperty("alt")]
         public string Alt { get; set; }
+
+        [JsonProperty("id")]
+        public string Id { get; set; }
     }
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
@@ -133,7 +136,7 @@ namespace SheetsCatalogImport.Models
         public SkusSpec[] Specs { get; set; }
 
         [JsonProperty("images")]
-        public ProductV2Image[] Images { get; set; }
+        public string[] Images { get; set; }
 
         [JsonProperty("name")]
         public string Name { get; set; }
