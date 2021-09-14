@@ -6,6 +6,8 @@
 
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
+PLEASE NOTE:  Support for Catalog V2 is under development
+
 # Google Catalog Import
 
 This app allows VTEX Catalog data to be imported from a spreadsheet on a user's Google Drive.
